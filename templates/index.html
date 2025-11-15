@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsible Prompting Toolkit v5 (LOCAL)</title>
+    <style>
+        /* ... (your <style> block is unchanged) ... */
+    </style>
+</head>
+<body>
+    <script>
+        // --- 1. Get DOM Elements ---
+        // ... (this section is unchanged) ...
+        const status = document.getElementById('status-display');
+        const promptInput = document.getElementById('prompt-input');
+        const outputDisplay = document.getElementById('output-display');
+        const ablationInput = document.getElementById('ablation-input');
+        const counterfactualInput = document.getElementById('counterfactual-input');
+        const bGenerate = document.getElementById('b-generate');
+        const bAnalyze = document.getElementById('b-analyze');
+        const bAblate = document.getElementById('b-ablate');
+        const bCounterfactual = document.getElementById('b-counterfactual');
+        const analysisDisplay = document.getElementById('analysis-display');
+        const experimentDisplay = document.getElementById('experiment-display');
+
+        // --- 🔴 YOUR NEW API BACKEND ---
+        // This is the ONLY line that changed.
+        const API_BASE_URL = 'http://localhost:10000';
+        // --- ---------------------- ---
+
+        // --- 2. App State ---
+        // ... (this section is unchanged) ...
+        const appState = {
+            original_prompt: "",
+            original_output: "",
+            original_analysis: {},
+            new_prompt: "",
+            new_output: ""
+        };
+
+        // --- 3. UI Helper Functions (HTML Builders) ---
+        // ... (All your buildHeatmapHTML, buildReportHTML, buildScoreHTML, etc. are unchanged) ...
+        function buildHeatmapHTML(heatmapData) {
+            if (!heatmapData || heatmapData.length === 0) {
+                return "<p><i>No heatmap data available.</i></p>";
+            }
+            let html = "<div style='line-height: 2.0;'>";
+            heatmapData.forEach(item => {
+                const word = item.word || '';
+                const score = item.impact_score || 0;
+                html += `<span class="impact-${score}">${word}</span> `;
+            });
+            html += "</div>";
+            return html;
+        }
+        function buildReportHTML(connectionsData) {
+            if (!connectionsData || connectionsData.length === 0) {
+                return "<p><i>No key connections identified.</i></p>";
+            }
+            let html = "";
+            connectionsData.forEach(item => {
+                const promptWord = item.prompt_word || 'N/A';
+                const score = item.impact_score || 0;
+                const outputWords = item.influenced_output_words || [];
+                const promptStyle = score >= 4 ? "prompt-word-high" : "prompt-word-med";
+                html += `<div class="report-item"><span class="${promptStyle}">${promptWord}</span><span class="arrow">→</span>`;
+                if (outputWords.length === 0) {
+                    html += "<i>(No direct output words identified)</i>";
+                } else {
+                    html += outputWords.map(word => `<span class="output-word">${word}</span>`).join(' ');
+                }
+                html += '</div>';
+            });
+            return html;
+        }
+        function buildScoreHTML(scoreData) {
+            const score = Math.max(1, Math.min(10, scoreData.semantic_change_score || 0));
+            const summary = scoreData.change_summary || 'N/A';
+            const red = Math.floor((score - 1) * (255 / 9));
+            const green = 255 - red;
+            const color = `rgb(${red}, ${green}, 0)`;
+            return `
+            <div class="change-report">
+                <strong>Impact Score:</strong>
+                <div class="score-bar-container">
+                    <div class="score-bar-fill" style="width: ${score * 10}%; background-color: ${color};">${score} / 10</div>
+                </div>
+                <div class="change-summary"><strong>Summary:</strong> ${summary}</div>
+            </div>`;
+        }
+        function buildPartialExperimentHTML(type) {
+            return `
+                <h2>${type.charAt(0).toUpperCase() + type.slice(1)} Study Results</h2>
+                
+                <hr style='margin-top: 20px;'>
+                <h3>Original Output</h3>
+                <pre>${appState.original_output}</pre>
+                <h3>New Output</h3>
+                <pre>${appState.new_output}</pre>
+
+                <div id="experiment-analysis-placeholder">
+                    <hr style='margin-top: 20px;'>
+                    <h3 style="color: #555;"><i>Analyzing impact (Step 2/2)...</i></h3>
+                </div>
+            `;
+        }
+        function buildFullExperimentHTML(analysisData) {
+            const originalHeatmap = buildHeatmapHTML(appState.original_analysis.heatmap_data);
+            const originalReport = buildReportHTML(appState.original_analysis.connections);
+            const beforeHTML = `
+                <h3>Before</h3>
+                <b>Prompt:</b> ${appState.original_prompt}<hr>
+                <b>Heatmap:</b> ${originalHeatmap}
+                <b>Significance:</b> ${originalReport}`;
+            
+            const newHeatmap = buildHeatmapHTML(analysisData.new_analysis.heatmap_data);
+            const newReport = buildReportHTML(analysisData.new_analysis.connections);
+            const afterHTML = `
+                <h3>After</h3>
+                <b>Prompt:</b> ${appState.new_prompt}<hr>
+                <b>Heatmap:</b> ${newHeatmap}
+                <b>Significance:</b> ${newReport}`;
+            
+            const scoreHTML = buildScoreHTML(analysisData.change_data);
+
+            return `
+                <div class="compare-container">
+                    <div class="compare-box compare-before">${beforeHTML}</div>
+                    <div class="compare-box">${afterHTML}</div>
+                </div>
+                <hr style='margin-top: 20px;'>
+                <h3>Change Analysis</h3>
+                ${scoreHTML}
+            `;
+        }
+
+        // --- 4. Main Event Handlers ---
+        // All of these are unchanged, as they just use the API_BASE_URL variable.
+        // ... (bGenerate, bAnalyze, runExperiment_Step1, runExperiment_Step2, etc. are all unchanged) ...
+        bGenerate.addEventListener('click', async () => {
+            setLoadingState(true, 'Generating...');
+            appState.original_prompt = promptInput.value;
+            
+            const response = await fetch(`${API_BASE_URL}/generate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ prompt: appState.original_prompt })
+            });
+            const data = await response.json();
+            appState.original_output = data.output || data.error;
+            outputDisplay.value = appState.original_output;
+            appState.original_analysis = {};
+            analysisDisplay.innerHTML = "";
+            experimentDisplay.innerHTML = "";
+            bAnalyze.disabled = false;
+            setLoadingState(false);
+        });
+        
+        bAnalyze.addEventListener('click', async () => {
+            setLoadingState(true, 'Analyzing...');
+            
+            const response = await fetch(`${API_BASE_URL}/analyze`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ prompt: appState.original_prompt, output: appState.original_output })
+            });
+            const data = await response.json();
+            appState.original_analysis = data;
+            
+            if (data.error) {
+                analysisDisplay.innerHTML = `<p style="color: red; font-weight: bold;">
+                    Analysis Failed:
+                </p><p style="font-family: monospace; background-color: #fdd; padding: 10px;">${data.error}</p>`;
+                setLoadingState(false);
+                return;
+            }
+            const heatmapHTML = buildHeatmapHTML(data.heatmap_data);
+            const reportHTML = buildReportHTML(data.connections);
+            analysisDisplay.innerHTML = `
+                <h4>Prompt Heatmap</h4>
+                <details style="margin-bottom: 15px; font-size: 0.9em; color: #555;">
+                    <summary style="cursor: pointer; font-weight: bold;">How is this heatmap computed?</summary>
+                    <div style="padding: 10px; border: 1px solid #eee; border-radius: 5px; margin-top: 5px; background-color: #fafafa;">
+                        <p style="margin-top: 0;">An AI model analyzes your prompt and its output, assigning an "impact score" (1-5) to every word.</p>
+                        <b>Legend:</b>
+                        <ul style="margin: 5px 0 0 20px; padding: 0; list-style-type: none;">
+                            <li><span class="impact-5" style="padding:2px 4px; border-radius:3px; display: inline-block; width: 20px; text-align: center;">5</span> High Impact: Critical to the output.</li>
+                            <li><span class="impact-3" style="padding:2px 4px; border-radius:3px; display: inline-block; width: 20px; text-align: center;">3</span> Medium Impact: Moderate influence.</li>
+                            <li><span class="impact-1" style="padding:2px 4px; border-radius:3px; display: inline-block; width: 20px; text-align: center;">1</span> Low Impact: Minor word (e.g., 'a', 'the').</li>
+                        </ul>
+                    </div>
+                </details>
+                ${heatmapHTML}
+                <h4 style='margin-top: 20px;'>Significance Report</h4>
+                ${reportHTML}`;
+            if (data.heatmap_data) {
+                let highImpactWords = data.heatmap_data
+                    .filter(item => (item.impact_score || 0) >= 4 && item.word && /^[a-zA-Z0-9]+$/.test(item.word))
+                    .map(item => item.word);
+                ablationInput.value = [...new Set(highImpactWords)].join(', ');
+            }
+            setLoadingState(false);
+        });
+
+        async function runExperiment_Step1(type) {
+            setLoadingState(true, `Running ${type} study... (Step 1/2: Generating)`);
+            const changes = (type === 'ablation') ? ablationInput.value : counterfactualInput.value;
+
+            const response = await fetch(`${API_BASE_URL}/run_experiment_step1`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    type: type,
+                    original_prompt: appState.original_prompt,
+                    changes: changes
+                })
+            });
+            const data = await response.json();
+            
+            if (data.error) {
+                experimentDisplay.innerHTML = `<p style="color: red;"><strong>Error:</strong> ${data.error}</p>`;
+                setLoadingState(false);
+                return;
+            }
+            
+            appState.new_prompt = data.new_prompt;
+            appState.new_output = data.new_output;
+
+            experimentDisplay.innerHTML = buildPartialExperimentHTML(type);
+            
+            runExperiment_Step2();
+        }
+        
+        async function runExperiment_Step2() {
+            setLoadingState(true, 'Running study... (Step 2/2: Analyzing)');
+
+            const response = await fetch(`${API_BASE_URL}/run_experiment_step2`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    original_output: appState.original_output,
+                    new_prompt: appState.new_prompt,
+                    new_output: appState.new_output
+                })
+            });
+            const data = await response.json();
+            
+            const placeholder = document.getElementById('experiment-analysis-placeholder');
+            
+            if (data.error || data.new_analysis?.error) {
+                placeholder.innerHTML = `<p style="color: red;"><strong>Analysis Error:</strong> ${data.error || data.new_analysis.error}</p>`;
+                setLoadingState(false);
+                return;
+            }
+            
+            const finalHTML = buildFullExperimentHTML(data);
+            placeholder.innerHTML = finalHTML;
+            
+            setLoadingState(false);
+        }
+
+        bAblate.addEventListener('click', () => runExperiment_Step1('ablation'));
+        bCounterfactual.addEventListener('click', () => runExperiment_Step1('counterfactual'));
+        
+        function setLoadingState(isLoading, message = '') {
+            status.textContent = message;
+            [bGenerate, bAnalyze, bAblate, bCounterfactual].forEach(btn => {
+                btn.disabled = isLoading;
+            });
+            if (!isLoading) {
+                bAnalyze.disabled = !outputDisplay.value;
+            }
+        }
+    </script>
+</body>
+</html>

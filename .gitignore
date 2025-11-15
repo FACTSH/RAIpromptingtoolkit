@@ -1,0 +1,11 @@
+# Virtual Environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# API Key - DANGER
+# (We are using environment variables, but this is a good safety check)
+*.env
+*key*
