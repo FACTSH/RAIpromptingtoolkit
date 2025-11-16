@@ -2,14 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "prompt.py",
+      "src": "rai.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "prompt.py"
+      "src": "/(generate|analyze|run_experiment)",
+      "dest": "rai.py"
+    },
+    {
+      "src": "/",
+      "dest": "index.html"
     }
   ]
 }
