@@ -82,6 +82,11 @@
             original_output: "",
             original_analysis: {}
         };
+        
+        // --- 🔴 VERCEL API URL ---
+        // We use relative paths (e.g., '/api/generate')
+        // Vercel will know how to route them.
+        const API_BASE_URL = '/api';
 
         // --- 3. UI Helper Functions (HTML Builders) ---
         function buildHeatmapHTML(heatmapData) {
@@ -139,7 +144,8 @@
             appState.original_prompt = promptInput.value;
             
             // --- 🔴 CHANGED LINE ---
-            const response = await fetch('/generate', {
+            // Using relative path for Vercel
+            const response = await fetch(`${API_BASE_URL}/generate`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ prompt: appState.original_prompt })
@@ -158,7 +164,8 @@
             setLoadingState(true, 'Analyzing...');
             
             // --- 🔴 CHANGED LINE ---
-            const response = await fetch('/analyze', {
+            // Using relative path for Vercel
+            const response = await fetch(`${API_BASE_URL}/analyze`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ prompt: appState.original_prompt, output: appState.original_output })
@@ -205,7 +212,8 @@
             const changes = (type === 'ablation') ? ablationInput.value : counterfactualInput.value;
             
             // --- 🔴 CHANGED LINE ---
-            const response = await fetch('/run_experiment', {
+            // Using relative path for Vercel
+            const response = await fetch(`${API_BASE_URL}/run_experiment`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -266,8 +274,12 @@
             `;
             setLoadingState(false);
         }
+        
         bAblate.addEventListener('click', () => runExperiment('ablation'));
-        bCounterfactual.addEventListener('click', ()D => runExperiment('counterfactual'));
+        
+        // --- 🔴 THIS IS THE FIX ---
+        // Removed the stray 'D' that was causing the SyntaxError
+        bCounterfactual.addEventListener('click', () => runExperiment('counterfactual'));
         
         function setLoadingState(isLoading, message = '') {
             status.textContent = message;
