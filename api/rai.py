@@ -15,15 +15,6 @@ GENERATION_MODEL = None
 ANALYSIS_MODEL = None
 MODEL_INIT_ERROR = None
 
-# Define reusable generation configs to limit all outputs to 50 tokens
-OUTPUT_CONFIG_50_TOKENS = genai.GenerationConfig(
-    max_output_tokens=50
-)
-JSON_OUTPUT_CONFIG_50_TOKENS = genai.GenerationConfig(
-    response_mime_type="application/json",
-    max_output_tokens=50
-)
-
 try:
     api_key = os.environ["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
@@ -51,12 +42,7 @@ def generate_text(prompt: str) -> str:
         raise RuntimeError(MODEL_INIT_ERROR)
     if GENERATION_MODEL is None:
         raise RuntimeError("Generation model is not initialized.")
-    
-    # Use the new config to limit output tokens
-    response = GENERATION_MODEL.generate_content(
-        prompt,
-        generation_config=OUTPUT_CONFIG_50_TOKENS
-    )
+    response = GENERATION_MODEL.generate_content(prompt)
     return response.text
 
 
@@ -119,10 +105,12 @@ def analyze_full_report(prompt: str, output: str) -> dict:
     """
 
     try:
-        # Use the new JSON config to limit output tokens
+        generation_config = genai.GenerationConfig(
+            response_mime_type="application/json"
+        )
         response = ANALYSIS_MODEL.generate_content(
             analysis_prompt,
-            generation_config=JSON_OUTPUT_CONFIG_50_TOKENS,
+            generation_config=generation_config,
         )
         return json.loads(response.text)
     except Exception as e:
@@ -222,10 +210,12 @@ def quantify_change(original_output: str, new_output: str) -> dict:
     """
 
     try:
-        # Use the new JSON config to limit output tokens
+        generation_config = genai.GenerationConfig(
+            response_mime_type="application/json"
+        )
         response = ANALYSIS_MODEL.generate_content(
             analysis_prompt,
-            generation_config=JSON_OUTPUT_CONFIG_50_TOKENS,
+            generation_config=generation_config,
         )
         return json.loads(response.text)
     except Exception as e:
@@ -243,17 +233,6 @@ def http_generate():
     prompt = data.get("prompt")
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
-    
-    try:
-        # Check token count *before* sending to the model
-        token_count = GENERATION_MODEL.count_tokens(prompt)
-        if token_count.total_tokens > 20:
-            return jsonify({
-                "error": f"Input exceeds 20 token limit ({token_count.total_tokens} tokens found)."
-            }), 400
-    except Exception as e:
-        app.logger.exception("Error during token counting")
-        return jsonify({"error": f"Error counting tokens: {str(e)}"}), 500
 
     try:
         output = generate_text(prompt)
