@@ -7,24 +7,24 @@ from flask_cors import CORS
 
 # --- 1. Configuration ---
 app = Flask(__name__)
-# --- 🔴 CHANGED LINE ---
 # This allows your Vercel frontend to talk to your Vercel backend
 CORS(app) 
 
 try:
+    # Make sure you set GEMINI_API_KEY in your Vercel project's Environment Variables
     api_key = os.environ["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
 except KeyError:
     print("!!! ERROR: GEMINI_API_KEY environment variable not set.")
 
-# --- 🔴 RECOMMENDED MODEL SETUP ---
-# Use Flash for fast, simple text generation
-generation_model = genai.GenerativeModel('gemini-2.5-flash')
-# Use Pro for smart, complex analysis and JSON output
-analysis_model = genai.GenerativeModel('gemini-2.5-pro')
-# --- END OF RECOMMENDATION ---
+# --- 🔴 CORRECTED MODEL SETUP ---
+# Use 1.5-Flash for fast, simple text generation
+generation_model = genai.GenerativeModel('gemini-1.5-flash')
+# Use 1.5-Pro for smart, complex analysis and JSON output
+analysis_model = genai.GenerativeModel('gemini-1.5-pro')
+# --- END OF CORRECTION ---
 
-print("✅ Gemini Models configured (Flash for generation, Pro for analysis).")
+print("✅ Gemini Models configured (1.5-Flash for generation, 1.5-Pro for analysis).")
 
 
 # --- 2. Core Toolkit Functions ---
@@ -111,18 +111,8 @@ def quantify_change(original_output, new_output):
 # --- 3. API Endpoints (The "Web Server" part) ---
 # (No changes needed to your @app.route functions)
 
-@app.route('/')
-def index():
-    """
-    Serves the main HTML page.
-    Note: Vercel will serve index.html directly, 
-    but this route is good practice.
-    """
-    # This function won't be called if vercel.json is set up correctly,
-    # but it's fine to leave it.
-    return "This is the backend server. The frontend is hosted separately on Firebase."
-
-@app.route('/generate', methods=['POST'])
+# Vercel will route /api/generate to this function
+@app.route('/api/generate', methods=['POST'])
 def http_generate():
     data = request.json
     prompt = data.get('prompt')
@@ -131,7 +121,8 @@ def http_generate():
     output = generate_text(prompt)
     return jsonify({"output": output})
 
-@app.route('/analyze', methods=['POST'])
+# Vercel will route /api/analyze to this function
+@app.route('/api/analyze', methods=['POST'])
 def http_analyze():
     data = request.json
     prompt = data.get('prompt')
@@ -141,7 +132,8 @@ def http_analyze():
     analysis_data = analyze_full_report(prompt, output)
     return jsonify(analysis_data)
 
-@app.route('/run_experiment', methods=['POST'])
+# Vercel will route /api/run_experiment to this function
+@app.route('/api/run_experiment', methods=['POST'])
 def http_run_experiment():
     data = request.json
     experiment_type = data.get('type')
@@ -173,6 +165,7 @@ def http_run_experiment():
 
 # --- 4. Run the Server ---
 # (This part is not used by Vercel, but is fine to leave in)
+# (Vercel uses the 'app' variable from line 10)
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(debug=False, host='0.0.0.0', port=port)
