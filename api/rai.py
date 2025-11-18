@@ -37,20 +37,31 @@ except Exception as e:
 # -------- 2. CORE TOOL FUNCTIONS --------
 
 def generate_text(prompt: str) -> str:
-    """Generate an output for the given prompt."""
+    """
+    Generate an output for the given prompt, then truncate to 100 words.
+    """
     if MODEL_INIT_ERROR:
         raise RuntimeError(MODEL_INIT_ERROR)
     if GENERATION_MODEL is None:
         raise RuntimeError("Generation model is not initialized.")
     
-    # --- ADDED: Generation config to limit output tokens ---
-    generation_config = genai.GenerationConfig(max_output_tokens=100)
-    
+    # --- MODIFIED: Removed token limit to get a full response ---
+    # We let the model generate its full thought first.
     response = GENERATION_MODEL.generate_content(
-        prompt,
-        generation_config=generation_config
+        prompt
     )
-    return response.text
+    
+    full_output = response.text
+    
+    # --- ADDED: Post-processing to truncate to 100 words ---
+    words = full_output.split()
+    if len(words) > 100:
+        # Join the first 100 words and add an ellipsis
+        truncated_output = " ".join(words[:100]) + "..."
+        return truncated_output
+    else:
+        # Return the full text if it's already 100 words or less
+        return full_output
 
 
 def analyze_full_report(prompt: str, output: str) -> dict:
