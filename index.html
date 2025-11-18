@@ -1015,8 +1015,7 @@
         `;
 
         setStatus(statusEl, `${type.charAt(0).toUpperCase() + type.slice(1)} study complete.`);
-      } catch (err)
-        console.error("Experiment error:", err);
+      } catch (err) { console.error("Experiment error:", err);
         setStatus(statusEl, `Error: ${err.message}`, true);
         experimentDisplay.innerHTML =
           `<p style="color: #f97373;"><strong>Error:</strong> ${err.message}</p>`;
