@@ -15,53 +15,64 @@ GENERATION_MODEL = None
 ANALYSIS_MODEL = None
 MODEL_INIT_ERROR = None
 
-try:
-    api_key = os.environ["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
 
-    # CHANGE THESE IF YOUR PROJECT USES DIFFERENT MODEL IDS
-    # Common safe defaults:
-    #   'gemini-1.5-flash' and 'gemini-1.5-pro'
-    GENERATION_MODEL = genai.GenerativeModel("gemini-2.0-flash")
-    ANALYSIS_MODEL = genai.GenerativeModel("gemini-2.5-flash")
+def init_models():
+    """
+    Initialize GEMINI models once, rather than on every request.
+    """
+    global GENERATION_MODEL, ANALYSIS_MODEL, MODEL_INIT_ERROR
+    try:
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY or GOOGLE_API_KEY is not set.")
 
-    print("✅ Gemini models configured.")
-except KeyError:
-    MODEL_INIT_ERROR = "GEMINI_API_KEY environment variable not set."
-    print(f"!!! ERROR: {MODEL_INIT_ERROR}")
-except Exception as e:
-    MODEL_INIT_ERROR = f"Error initializing Gemini models: {e}"
-    print(f"!!! ERROR: {MODEL_INIT_ERROR}")
+        genai.configure(api_key=api_key)
+
+        GENERATION_MODEL = genai.GenerativeModel("gemini-1.5-flash")
+        ANALYSIS_MODEL = genai.GenerativeModel("gemini-1.5-flash")
+        MODEL_INIT_ERROR = None
+    except Exception as e:
+        MODEL_INIT_ERROR = str(e)
 
 
-# -------- 2. CORE TOOL FUNCTIONS --------
+init_models()
+
+
+# -------- 2. UTILS --------
+
+def clean_prompt(text: str) -> str:
+    """
+    Minimal cleaning, in case you want to standardize whitespace, etc.
+    """
+    text = text.strip()
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+# -------- 3. CORE GENERATION (100-WORD OUTPUT LIMIT) --------
 
 def generate_text(prompt: str) -> str:
     """
-    Generate an output for the given prompt, then truncate to 100 words.
+    Generate an output for the given prompt, with a hard limit of 100 words.
+    The model is explicitly instructed to stay under 100 words, and the result
+    is post-processed to enforce the cap.
     """
     if MODEL_INIT_ERROR:
         raise RuntimeError(MODEL_INIT_ERROR)
     if GENERATION_MODEL is None:
         raise RuntimeError("Generation model is not initialized.")
     
-    # --- MODIFIED: Removed token limit to get a full response ---
-    # We let the model generate its full thought first.
-    response = GENERATION_MODEL.generate_content(
-        prompt
-    )
+    # Add explicit instruction so the model aims to stay concise
+    constrained_prompt = prompt.strip() + "\n\nRespond in 100 words or fewer."
+
+    response = GENERATION_MODEL.generate_content(constrained_prompt)
+    full_output = response.text or ""
     
-    full_output = response.text
-    
-    # --- ADDED: Post-processing to truncate to 100 words ---
+    # Post-process to enforce 100-word cap
     words = full_output.split()
     if len(words) > 100:
-        # Join the first 100 words and add an ellipsis
-        truncated_output = " ".join(words[:100]) + "..."
-        return truncated_output
-    else:
-        # Return the full text if it's already 100 words or less
-        return full_output
+        return " ".join(words[:100]) + "..."
+    return full_output
 
 
 def analyze_full_report(prompt: str, output: str) -> dict:
@@ -76,174 +87,107 @@ def analyze_full_report(prompt: str, output: str) -> dict:
           {
             "prompt_word": "formal",
             "impact_score": 5,
-            "influenced_output_words": ["professional", "polite tone", ...]
+            "influence": [
+              {
+                "output_phrase": "I hope this email finds you well",
+                "relationship_type": "style_match",
+                "direction": "positive",
+                "confidence": 0.9
+              },
+              ...
+            ]
           },
           ...
         ]
       }
     """
     if MODEL_INIT_ERROR:
-        return {
-            "heatmap_data": [],
-            "connections": [],
-            "error": MODEL_INIT_ERROR,
+        raise RuntimeError(MODEL_INIT_ERROR)
+    if ANALYSIS_MODEL is None:
+        raise RuntimeError("Analysis model is not initialized.")
+
+    system_instructions = """
+You are an analysis engine for prompt-output pairs.
+
+Given:
+1) A user prompt.
+2) The model's generated output.
+
+You produce:
+- A 'heatmap' of the prompt words, indicating how strongly they influenced
+  the final output.
+- A set of 'connections' describing how each significant prompt word or phrase
+  affected specific output phrases, including relationship type, direction,
+  and a confidence score.
+
+Return strictly valid JSON. Fields:
+{
+  "heatmap_data": [
+    {
+      "word": "string",
+      "impact_score": integer from 1 (weak) to 5 (very strong)
+    }
+  ],
+  "connections": [
+    {
+      "prompt_word": "string",
+      "impact_score": integer 1-5,
+      "influence": [
+        {
+          "output_phrase": "string",
+          "relationship_type": "style_match" | "topic_match" | "sentiment_shift" | "constraint_enforcement" | "other",
+          "direction": "positive" | "negative" | "neutral",
+          "confidence": float between 0 and 1
         }
-
-    analysis_prompt = f"""
-    You are a prompt analysis tool. Analyze the following pair.
-
-    PROMPT: {prompt}
-    OUTPUT: {output}
-
-    Task 1: Word-by-Word Heatmap
-    - Go through the PROMPT word by word (including punctuation as tokens).
-    - For every token, assign an "impact_score" (integer 1–5):
-      1 = minimal influence on the final output
-      3 = moderate influence
-      5 = very high influence / critical to structure or meaning
-
-    Task 2: Key Connections
-    - Identify key or instructional words from the PROMPT (e.g., 'formal', 'short', 'in 3 bullet points').
-    - For each key word, list the output words or short phrases it most strongly influenced.
-
-    Return ONLY a valid JSON object:
-    {{
-      "heatmap_data": [
-        {{"word": "word1", "impact_score": 1}},
-        {{"word": "word2", "impact_score": 5}}
-      ],
-      "connections": [
-        {{
-          "prompt_word": "formal",
-          "impact_score": 5,
-          "influenced_output_words": ["professional tone", "polite closing"]
-        }}
       ]
-    }}
-    """
+    }
+  ]
+}
+Only return JSON.
+"""
+
+    prompt_text = f"""
+User Prompt:
+{prompt}
+
+Model Output:
+{output}
+"""
+
+    response = ANALYSIS_MODEL.generate_content(
+        [
+            {"role": "system", "parts": [system_instructions]},
+            {"role": "user", "parts": [prompt_text]},
+        ]
+    )
+
+    raw_text = response.text.strip()
 
     try:
-        generation_config = genai.GenerationConfig(
-            response_mime_type="application/json"
-        )
-        response = ANALYSIS_MODEL.generate_content(
-            analysis_prompt,
-            generation_config=generation_config,
-        )
-        return json.loads(response.text)
-    except Exception as e:
-        print(f"!!! ANALYSIS FAILED: {e}")
-        return {
+        data = json.loads(raw_text)
+    except Exception:
+        data = {
             "heatmap_data": [],
             "connections": [],
-            "error": f"Error during analysis: {e}",
+            "raw_analysis_text": raw_text,
         }
 
+    if "heatmap_data" not in data or not isinstance(data["heatmap_data"], list):
+        data["heatmap_data"] = []
+    if "connections" not in data or not isinstance(data["connections"], list):
+        data["connections"] = []
 
-def run_ablation_study(original_prompt: str, words_to_remove):
-    """
-    Ablation:
-    - Remove the specified words from the original prompt.
-    - Re-generate the output on this 'ablated' prompt.
-    """
-    new_prompt = original_prompt
-    for word in words_to_remove:
-        if not word:
-            continue
-        new_prompt = re.sub(
-            r"\b" + re.escape(word) + r"\b",
-            "",
-            new_prompt,
-            flags=re.IGNORECASE,
-        )
-
-    new_prompt = re.sub(r"\s+", " ", new_prompt).strip()
-    new_output = generate_text(new_prompt)
-    return new_output, new_prompt
+    return data
 
 
-def run_counterfactual_study(original_prompt: str, replacement_map: dict):
-    """
-    Counterfactual:
-    - Replace words in the prompt according to replacement_map, e.g.:
-      {"formal": "informal", "sick": "personal"}
-    - Re-generate output on this counterfactual prompt.
-    """
-    new_prompt = original_prompt
-    for old_word, new_word in replacement_map.items():
-        new_prompt = re.sub(
-            r"\b" + re.escape(old_word) + r"\b",
-            new_word,
-            new_prompt,
-            flags=re.IGNORECASE,
-        )
+# -------- 4. FLASK ROUTES --------
 
-    new_output = generate_text(new_prompt)
-    return new_output, new_prompt
-
-
-def quantify_change(original_output: str, new_output: str) -> dict:
-    """
-    Compare original vs new outputs and compute a semantic_change_score (1–10).
-
-    The analysis model is asked to judge:
-      1 = almost no change
-      5 = medium change (tone, style, minor details)
-      10 = meaning/content is fundamentally different
-    """
-    if original_output == new_output:
-        return {
-            "semantic_change_score": 1,
-            "change_summary": "No change.",
-        }
-
+@app.route("/health", methods=["GET"])
+def health():
     if MODEL_INIT_ERROR:
-        return {
-            "semantic_change_score": -1,
-            "change_summary": MODEL_INIT_ERROR,
-        }
+        return jsonify({"status": "error", "detail": MODEL_INIT_ERROR}), 500
+    return jsonify({"status": "ok"}), 200
 
-    analysis_prompt = f"""
-    You are an output analysis tool. Analyze the semantic difference between these two texts.
-
-    Original Output:
-    {original_output}
-
-    ---
-    New Output:
-    {new_output}
-
-    Your Task:
-    1. Assign a "semantic_change_score" (integer 1–10):
-       - 1 = no meaningful difference
-       - 5 = moderate change (tone, style, minor details changed, but core meaning same)
-       - 10 = major change in meaning, facts, or intent
-    2. Write a brief "change_summary" (one short sentence) explaining the most important difference.
-
-    Return ONLY a JSON object:
-    {{
-      "semantic_change_score": <int>,
-      "change_summary": "<short summary>"
-    }}
-    """
-
-    try:
-        generation_config = genai.GenerationConfig(
-            response_mime_type="application/json"
-        )
-        response = ANALYSIS_MODEL.generate_content(
-            analysis_prompt,
-            generation_config=generation_config,
-        )
-        return json.loads(response.text)
-    except Exception as e:
-        return {
-            "semantic_change_score": -1,
-            "change_summary": f"Error during change analysis: {e}",
-        }
-
-
-# -------- 3. API ENDPOINTS (/api/...) --------
 
 @app.route("/api/generate", methods=["POST"])
 def http_generate():
@@ -252,7 +196,7 @@ def http_generate():
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
     
-    # --- ADDED: Check prompt length (using words as proxy for tokens) ---
+    # Input length limit: 20 words as a proxy for 20 tokens
     if len(prompt.split()) > 20:
         return jsonify({"error": "Input prompt is limited to 20 tokens (words)."}), 400
 
@@ -261,7 +205,9 @@ def http_generate():
         return jsonify({"output": output})
     except Exception as e:
         app.logger.exception("Error during generation")
-        return jsonify({"error": f"Error during generation: {str(e)}"}), 500
+        if MODEL_INIT_ERROR:
+            return jsonify({"error": f"Model initialization error: {MODEL_INIT_ERROR}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -272,8 +218,14 @@ def http_analyze():
     if not prompt or not output:
         return jsonify({"error": 'Both "prompt" and "output" are required'}), 400
 
-    analysis_data = analyze_full_report(prompt, output)
-    return jsonify(analysis_data)
+    try:
+        analysis_data = analyze_full_report(prompt, output)
+        return jsonify(analysis_data)
+    except Exception as e:
+        app.logger.exception("Error during analysis")
+        if MODEL_INIT_ERROR:
+            return jsonify({"error": f"Model initialization error: {MODEL_INIT_ERROR}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/run_experiment", methods=["POST"])
@@ -282,68 +234,80 @@ def http_run_experiment():
     Request body:
     {
       "type": "ablation" | "counterfactual",
-      "original_prompt": "...",
-      "original_output": "...",
-      "changes": "formal, polite"
-         OR
-      "changes": "{\"formal\": \"informal\", \"sick\": \"personal\"}"
+      "original_prompt": "string",
+      "variations": [
+        "string variation 1",
+        "string variation 2",
+        ...
+      ]
     }
+
+    For 'ablation':
+      - variations might remove or alter certain words
+      - we compare the model outputs and highlight changes in content/style
+
+    For 'counterfactual':
+      - variations might flip some conditions in the prompt
+      - we compare the outputs to see how they differ logically
     """
     data = request.json or {}
     experiment_type = data.get("type")
     original_prompt = data.get("original_prompt")
-    original_output = data.get("original_output")
+    variations = data.get("variations", [])
 
-    if not original_prompt or not original_output:
-        return jsonify({
-            "error": "original_prompt and original_output are required"
-        }), 400
+    if not experiment_type or experiment_type not in ["ablation", "counterfactual"]:
+        return jsonify({"error": 'Invalid or missing "type". Must be "ablation" or "counterfactual".'}), 400
+    if not original_prompt:
+        return jsonify({"error": 'Missing "original_prompt".'}), 400
+    if not isinstance(variations, list) or not variations:
+        return jsonify({"error": 'Missing or invalid "variations". Must be a non-empty list of prompts.'}), 400
 
-    if experiment_type == "ablation":
-        words_to_remove = (data.get("changes", "") or "").split(",")
-        words_to_remove = [w.strip() for w in words_to_remove if w.strip()]
-        try:
-            new_output, new_prompt = run_ablation_study(
-                original_prompt,
-                words_to_remove,
-            )
-        except Exception as e:
-            app.logger.exception("Error during ablation study")
-            return jsonify({"error": f"Ablation failed: {str(e)}"}), 500
+    # Input length limit for original and variations
+    if len(original_prompt.split()) > 20:
+        return jsonify({"error": "Original prompt is limited to 20 tokens (words)."}), 400
+    for v in variations:
+        if len(str(v).split()) > 20:
+            return jsonify({"error": "Each variation prompt is limited to 20 tokens (words)."}), 400
 
-    elif experiment_type == "counterfactual":
-        raw_changes = data.get("changes", "{}") or "{}"
-        try:
-            replacement_map = json.loads(raw_changes)
-            if not isinstance(replacement_map, dict):
-                raise ValueError("changes must be a JSON object")
-        except Exception:
-            return jsonify({"error": "Invalid JSON for replacements in 'changes'"}), 400
+    try:
+        original_output = generate_text(original_prompt)
 
-        try:
-            new_output, new_prompt = run_counterfactual_study(
-                original_prompt,
-                replacement_map,
-            )
-        except Exception as e:
-            app.logger.exception("Error during counterfactual study")
-            return jsonify({"error": f"Counterfactual failed: {str(e)}"}), 500
+        variation_outputs = []
+        for v in variations:
+            out = generate_text(v)
+            variation_outputs.append({"prompt": v, "output": out})
 
-    else:
-        return jsonify({"error": "Invalid experiment type"}), 400
+        original_analysis = analyze_full_report(original_prompt, original_output)
 
-    new_analysis_data = analyze_full_report(new_prompt, new_output)
-    change_data = quantify_change(original_output, new_output)
+        experiments = []
+        for var in variation_outputs:
+            var_prompt = var["prompt"]
+            var_output = var["output"]
+            var_analysis = analyze_full_report(var_prompt, var_output)
 
-    return jsonify({
-        "new_prompt": new_prompt,
-        "new_output": new_output,
-        "new_analysis": new_analysis_data,
-        "change_data": change_data,
-    })
+            experiments.append({
+                "variation_prompt": var_prompt,
+                "variation_output": var_output,
+                "variation_analysis": var_analysis
+            })
+
+        result = {
+            "type": experiment_type,
+            "original": {
+                "prompt": original_prompt,
+                "output": original_output,
+                "analysis": original_analysis
+            },
+            "experiments": experiments
+        }
+        return jsonify(result)
+    except Exception as e:
+        app.logger.exception("Error running experiment")
+        if MODEL_INIT_ERROR:
+            return jsonify({"error": f"Model initialization error: {MODEL_INIT_ERROR}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
-# Local dev only; Vercel ignores this.
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(debug=False, host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=True)
