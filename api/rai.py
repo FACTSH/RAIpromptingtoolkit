@@ -42,7 +42,14 @@ def generate_text(prompt: str) -> str:
         raise RuntimeError(MODEL_INIT_ERROR)
     if GENERATION_MODEL is None:
         raise RuntimeError("Generation model is not initialized.")
-    response = GENERATION_MODEL.generate_content(prompt)
+    
+    # --- ADDED: Generation config to limit output tokens ---
+    generation_config = genai.GenerationConfig(max_output_tokens=50)
+    
+    response = GENERATION_MODEL.generate_content(
+        prompt,
+        generation_config=generation_config
+    )
     return response.text
 
 
@@ -233,6 +240,10 @@ def http_generate():
     prompt = data.get("prompt")
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
+    
+    # --- ADDED: Check prompt length (using words as proxy for tokens) ---
+    if len(prompt.split()) > 10:
+        return jsonify({"error": "Input prompt is limited to 10 tokens (words)."}), 400
 
     try:
         output = generate_text(prompt)

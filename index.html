@@ -58,9 +58,9 @@
     }
 
     #app-logo {
-      height: 96px;
-      width: 96px;
-      border-radius: 24px;
+      height: 128px; /* Changed from 96px */
+      width: 128px; /* Changed from 96px */
+      border-radius: 32px; /* Changed from 24px */
       box-shadow: 0 18px 50px rgba(15, 23, 42, 0.9);
       object-fit: cover;
       border: 1px solid rgba(148, 163, 184, 0.4);
@@ -553,9 +553,9 @@
       }
 
       #app-logo {
-        height: 72px;
-        width: 72px;
-        border-radius: 18px;
+        height: 96px; /* Changed from 72px */
+        width: 96px; /* Changed from 72px */
+        border-radius: 24px; /* Changed from 18px */
       }
     }
 
@@ -577,7 +577,7 @@
 </head>
 <body>
   <header>
-    <img src="factsh.jpeg" alt="Logo" id="app-logo" />
+    <img src="api\factsh.jpeg" alt="Logo" id="app-logo" />
     <div class="header-text">
       <h1>Responsible Prompting Toolkit</h1>
       <p>Explore how small changes in your prompt affect a model’s behavior through analysis,
@@ -586,12 +586,11 @@
   </header>
 
   <div class="bento-grid">
-    <!-- Prompt -->
     <div class="bento-item bento-prompt">
       <h3><span class="step">1</span>Prompt</h3>
       <p class="description">Start by entering your prompt. The clearer the intent, the easier it is to interpret the
         analysis.</p>
-      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email...">Write a short, formal, and polite email to my manager about a sick day.</textarea>
+      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email... (10 word limit)">Write a short, formal, and polite email to my manager about a sick day.</textarea>
       <button id="b-generate">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
           <path
@@ -602,11 +601,10 @@
       <div id="status-generate" class="status-line"></div>
     </div>
 
-    <!-- Output -->
     <div class="bento-item bento-output">
       <h3><span class="step">2</span>Output</h3>
       <p class="description">The model’s response appears here. Once you’re satisfied, run the analysis.</p>
-      <textarea id="output-display" placeholder="Output will appear here..." readonly></textarea>
+      <textarea id="output-display" placeholder="Output will appear here... (50 token limit)" readonly></textarea>
       <button id="b-analyze" disabled>
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
           <path
@@ -617,7 +615,6 @@
       <div id="status-analyze" class="status-line"></div>
     </div>
 
-    <!-- Analysis -->
     <div class="bento-item bento-analysis">
       <h3><span class="step">3</span>Analysis</h3>
       <p class="description">Heatmap scores highlight impactful words; the report links them to specific pieces of the
@@ -625,7 +622,6 @@
       <div id="analysis-report-display">Click <b>Analyze Significance</b> to see the heatmap and key connections.</div>
     </div>
 
-    <!-- Ablation -->
     <div class="bento-item bento-ablation">
       <h3><span class="step">A</span>Ablation (Remove)</h3>
       <p class="description">Remove words to test how much they actually matter to the model’s behavior.</p>
@@ -639,7 +635,6 @@
       <div id="status-ablation" class="status-line"></div>
     </div>
 
-    <!-- Counterfactual -->
     <div class="bento-item bento-counterfactual">
       <h3><span class="step">B</span>Counterfactual (Replace)</h3>
       <p class="description">Swap terms with “what-if” alternatives to see how the model’s tone or content shifts.</p>
@@ -654,7 +649,6 @@
       <div id="status-counterfactual" class="status-line"></div>
     </div>
 
-    <!-- Experiment preview -->
     <div class="bento-item bento-preview" id="experiment-display"></div>
   </div>
 
@@ -807,6 +801,13 @@
         setStatus(statusGenerate, "Please enter a prompt first.", true);
         return;
       }
+      
+      // Check word count (proxy for tokens)
+      if (appState.original_prompt.split(/\s+/).length > 10) {
+        setLoading(false);
+        setStatus(statusGenerate, "Error: Prompt must be 10 words or less.", true);
+        return;
+      }
 
       setStatus(statusGenerate, "Generating output...");
 
@@ -818,8 +819,8 @@
         });
 
         if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Server error ${res.status}: ${text}`);
+          const data = await res.json();
+          throw new Error(data.error || `Server error ${res.status}`);
         }
 
         const data = await res.json();
@@ -832,7 +833,7 @@
         setStatus(statusGenerate, "Output generated.");
       } catch (err) {
         console.error("Generate error:", err);
-        setStatus(statusGenerate, `Error: ${err.message}`, true);
+        setStatus(statusGenerate, `${err.message}`, true);
       } finally {
         setLoading(false);
       }
@@ -954,8 +955,8 @@
         });
 
         if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Server error ${res.status}: ${text}`);
+          const data = await res.json();
+          throw new Error(data.error || `Server error ${res.status}`);
         }
 
         const data = await res.json();
@@ -1014,7 +1015,7 @@
         `;
 
         setStatus(statusEl, `${type.charAt(0).toUpperCase() + type.slice(1)} study complete.`);
-      } catch (err) {
+      } catch (err)
         console.error("Experiment error:", err);
         setStatus(statusEl, `Error: ${err.message}`, true);
         experimentDisplay.innerHTML =
