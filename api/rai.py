@@ -28,8 +28,8 @@ def init_models():
 
         genai.configure(api_key=api_key)
 
-        GENERATION_MODEL = genai.GenerativeModel("gemini-1.5-flash")
-        ANALYSIS_MODEL = genai.GenerativeModel("gemini-1.5-flash")
+        GENERATION_MODEL = genai.GenerativeModel("gemini-2.5-flash")
+        ANALYSIS_MODEL = genai.GenerativeModel("gemini-2.0-flash")
         MODEL_INIT_ERROR = None
     except Exception as e:
         MODEL_INIT_ERROR = str(e)

@@ -590,7 +590,7 @@
       <h3><span class="step">1</span>Prompt</h3>
       <p class="description">Start by entering your prompt. The clearer the intent, the easier it is to interpret the
         analysis.</p>
-      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email... (10 word limit)">Write a short, formal, and polite email to my manager about a sick day.</textarea>
+      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email (20 word limit)">Write a short, formal, and polite email to my manager about a sick day.</textarea>
       <button id="b-generate">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
           <path
@@ -623,7 +623,7 @@
     </div>
 
     <div class="bento-item bento-ablation">
-      <h3><span class="step">A</span>Ablation (Remove)</h3>
+      <h3><span class="step">A</span>Component analysis (Remove)</h3>
       <p class="description">Remove words to test how much they actually matter to the model’s behavior.</p>
       <input type="text" id="ablation-input" placeholder="e.g., formal, polite" />
       <details>
@@ -636,7 +636,7 @@
     </div>
 
     <div class="bento-item bento-counterfactual">
-      <h3><span class="step">B</span>Counterfactual (Replace)</h3>
+      <h3><span class="step">B</span>Alternative scenario reasoning(Replace)</h3>
       <p class="description">Swap terms with “what-if” alternatives to see how the model’s tone or content shifts.</p>
       <textarea id="counterfactual-input" style="min-height: 80px;"
         placeholder="formal, informal&#10;polite, rude"></textarea>
@@ -803,9 +803,9 @@
       }
       
       // Check word count (proxy for tokens)
-      if (appState.original_prompt.split(/\s+/).length > 10) {
+      if (appState.original_prompt.split(/\s+/).length > 20) {
         setLoading(false);
-        setStatus(statusGenerate, "Error: Prompt must be 10 words or less.", true);
+        setStatus(statusGenerate, "Error: Keep the prompt less than 20.", true);
         return;
       }
 
