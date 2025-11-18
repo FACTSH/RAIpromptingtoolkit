@@ -581,7 +581,7 @@
     <div class="header-text">
       <h1>Responsible Prompting Toolkit</h1>
       <p>Explore how small changes in your prompt affect a model’s behavior through analysis,
-        ablation, and counterfactual experiments.</p>
+        removal, and replacement experiments.</p>
     </div>
   </header>
 
@@ -623,20 +623,20 @@
     </div>
 
     <div class="bento-item bento-ablation">
-      <h3><span class="step">A</span>Ablation (Remove)</h3>
+      <h3><span class="step">A</span>Contribution analysis (Remove)</h3>
       <p class="description">Remove words to test how much they actually matter to the model’s behavior.</p>
       <input type="text" id="ablation-input" placeholder="e.g., formal, polite" />
       <details>
-        <summary>What does ablation show?</summary>
+        <summary>What does it show?</summary>
         <p>We remove words (e.g., <code>formal</code>) and compare the outputs. Big changes mean the word carries real
           weight. Small changes suggest the model is ignoring it.</p>
       </details>
-      <button id="b-ablate">Run Ablation Study</button>
+      <button id="b-ablate">Run Study</button>
       <div id="status-ablation" class="status-line"></div>
     </div>
 
     <div class="bento-item bento-counterfactual">
-      <h3><span class="step">B</span>Counterfactual (Replace)</h3>
+      <h3><span class="step">B</span>Alternative scenario reasoning (Replace)</h3>
       <p class="description">Swap terms with “what-if” alternatives to see how the model’s tone or content shifts.</p>
       <textarea id="counterfactual-input" style="min-height: 80px;"
         placeholder="formal, informal&#10;polite, rude"></textarea>
@@ -645,7 +645,7 @@
         <p>Each line is a pair like <code>formal, informal</code>. We replace those words in your prompt, rerun the
           model, then compare outputs and analysis.</p>
       </details>
-      <button id="b-counterfactual">Run Counterfactual Study</button>
+      <button id="b-counterfactual">Run replacement Study</button>
       <div id="status-counterfactual" class="status-line"></div>
     </div>
 
