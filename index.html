@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Responsible Prompting Toolkit</title>
   
-  <link rel="icon" type="image/png" href="FACTSH.png" />
+  <link rel="icon" type="image/png" href="factsh.png" />
 
   <style>
     :root {
@@ -580,7 +580,7 @@
 </head>
 <body>
   <header>
-    <img src="FACTSH.png" alt="Logo" id="app-logo" />
+    <img src="factsh.png" alt="Logo" id="app-logo" />
     <div class="header-text">
       <h1>Responsible Prompting Toolkit</h1>
       <p>Explore how small changes in your prompt affect a model’s behavior through analysis,
@@ -759,30 +759,6 @@
       });
     }
 
-    function buildCounterfactualJSON(inputText) {
-      const lines = (inputText || "")
-        .split(/\r?\n/)
-        .map(l => l.trim())
-        .filter(l => l.length > 0);
-
-      const map = {};
-      lines.forEach(line => {
-        const idx = line.indexOf(",");
-        if (idx === -1) return;
-        const key = line.slice(0, idx).trim();
-        const value = line.slice(idx + 1).trim();
-        if (key && value) {
-          map[key] = value;
-        }
-      });
-
-      if (Object.keys(map).length === 0) {
-        throw new Error("Please enter at least one pair in the format: word, replacement");
-      }
-
-      return JSON.stringify(map);
-    }
-
     function setLoading(isLoading) {
       [bGenerate, bAnalyze, bAblate, bCounterfactual].forEach(btn => {
         btn.disabled = isLoading || (btn === bAnalyze && !outputDisplay.value);
@@ -936,8 +912,14 @@
       try {
         if (type === "ablation") {
           changes = ablationInput.value;
+          if (!changes.trim()) {
+            throw new Error("Enter at least one word to remove, e.g., formal, polite");
+          }
         } else {
-          changes = buildCounterfactualJSON(counterfactualInput.value);
+          changes = counterfactualInput.value;
+          if (!changes.trim()) {
+            throw new Error("Enter at least one line like: formal, informal");
+          }
         }
       } catch (err) {
         setLoading(false);
@@ -1018,7 +1000,8 @@
         `;
 
         setStatus(statusEl, `${type.charAt(0).toUpperCase() + type.slice(1)} study complete.`);
-      } catch (err) { console.error("Experiment error:", err);
+      } catch (err) {
+        console.error("Experiment error:", err);
         setStatus(statusEl, `Error: ${err.message}`, true);
         experimentDisplay.innerHTML =
           `<p style="color: #f97373;"><strong>Error:</strong> ${err.message}</p>`;

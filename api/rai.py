@@ -240,6 +240,35 @@ def ablate_prompt(original_prompt: str, changes_text: str) -> str:
     return new_prompt
 
 
+def parse_counterfactual_pairs(text: str) -> dict:
+    """
+    Parse lines of 'word, replacement' into a mapping.
+    Example input:
+
+        formal, informal
+        polite, rude
+
+    Returns: { "formal": "informal", "polite": "rude" }
+    """
+    mapping = {}
+    if not text:
+        return mapping
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        idx = line.find(",")
+        if idx == -1:
+            continue
+        key = line[:idx].strip()
+        value = line[idx + 1 :].strip()
+        if key and value:
+            mapping[key] = value
+
+    return mapping
+
+
 def apply_counterfactual(original_prompt: str, mapping: dict) -> str:
     """
     Replace words/phrases based on a mapping: { "formal": "informal", ... }.
@@ -397,15 +426,16 @@ def http_run_experiment():
       "type": "ablation" | "counterfactual",
       "original_prompt": "string",
       "original_output": "string",
-      "changes": string | object
+      "changes": string
     }
 
-    - For "ablation": changes is a string like "formal, polite".
+    - For "ablation": changes is a string like:
+        "formal, polite"
       We remove those words from the prompt.
 
-    - For "counterfactual": changes is an object like
-      { "formal": "informal", "polite": "rude" }.
-      We replace words/phrases in the prompt accordingly.
+    - For "counterfactual": changes is a multiline string like:
+        "formal, informal\npolite, rude"
+      We parse each line as "word, replacement" and replace in the prompt.
     """
     data = request.json or {}
     experiment_type = data.get("type")
@@ -427,17 +457,24 @@ def http_run_experiment():
         if experiment_type == "ablation":
             if not isinstance(changes, str) or not changes.strip():
                 return jsonify(
-                    {"error": 'For "ablation", "changes" must be a non-empty string.'}
+                    {"error": 'For "ablation", "changes" must be a non-empty string like "formal, polite".'}
                 ), 400
             new_prompt = ablate_prompt(original_prompt, changes)
         else:  # counterfactual
-            if not isinstance(changes, dict) or not changes:
+            if not isinstance(changes, str) or not changes.strip():
                 return jsonify(
                     {
-                        "error": 'For "counterfactual", "changes" must be a non-empty object like {"formal": "informal"}.'
+                        "error": 'For "counterfactual", "changes" must be a non-empty multiline string like:\nformal, informal\npolite, rude'
                     }
                 ), 400
-            new_prompt = apply_counterfactual(original_prompt, changes)
+            mapping = parse_counterfactual_pairs(changes)
+            if not mapping:
+                return jsonify(
+                    {
+                        "error": 'Could not parse any "word, replacement" pairs. Use lines like: formal, informal'
+                    }
+                ), 400
+            new_prompt = apply_counterfactual(original_prompt, mapping)
 
         # Generate new output for modified prompt
         new_output = generate_text(new_prompt)
