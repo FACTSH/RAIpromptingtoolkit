@@ -370,365 +370,244 @@
     <div class="bento-item bento-preview" id="experiment-display"></div>
   </div>
 
-
   <script>
+    // --- Elements ---
     const promptInput = document.getElementById("prompt-input");
     const outputDisplay = document.getElementById("output-display");
     const ablationInput = document.getElementById("ablation-input");
     const counterfactualInput = document.getElementById("counterfactual-input");
+    const analysisDisplay = document.getElementById("analysis-report-display");
+    const experimentDisplay = document.getElementById("experiment-display");
 
     const bGenerate = document.getElementById("b-generate");
     const bAnalyze = document.getElementById("b-analyze");
     const bAblate = document.getElementById("b-ablate");
     const bCounterfactual = document.getElementById("b-counterfactual");
 
-    const statusGenerate = document.getElementById("status-generate");
-    const statusAnalyze = document.getElementById("status-analyze");
-    const statusAblation = document.getElementById("status-ablation");
-    const statusCounterfactual = document.getElementById("status-counterfactual");
-
-    const analysisDisplay = document.getElementById("analysis-report-display");
-    const experimentDisplay = document.getElementById("experiment-display");
-
-    const appState = {
-      original_prompt: "",
-      original_output: "",
-      original_analysis: {}
+    const statuses = {
+      gen: document.getElementById("status-generate"),
+      ana: document.getElementById("status-analyze"),
+      abl: document.getElementById("status-ablation"),
+      cnt: document.getElementById("status-counterfactual")
     };
 
-    function buildHeatmapHTML(heatmapData) {
-      if (!Array.isArray(heatmapData) || heatmapData.length === 0) {
-        return "<p><i>No heatmap data available.</i></p>";
+    // --- State ---
+    let appState = {
+      prompt: "",
+      output: "",
+      analysis: null
+    };
+
+    // --- Helpers ---
+    function setStatus(key, msg, error = false) {
+      if(statuses[key]) {
+        statuses[key].textContent = msg;
+        statuses[key].style.color = error ? "#f87171" : "#94a3b8";
       }
-      let html = "<div style='line-height: 1.9;'>";
-      heatmapData.forEach(item => {
-        const word = item.word || "";
-        const score = item.impact_score || 0;
-        const clamped = Math.max(1, Math.min(5, score));
-        html += `<span class="impact-${clamped}">${word}</span>`;
-      });
-      html += "</div>";
-      return html;
     }
 
-    function buildReportHTML(connectionsData) {
-      if (!Array.isArray(connectionsData) || connectionsData.length === 0) {
-        return "<p><i>No key connections identified.</i></p>";
-      }
-      let html = "";
-      connectionsData.forEach(item => {
-        const promptWord = item.prompt_word || "N/A";
-        const score = item.impact_score || 0;
-        const outputWords = item.influenced_output_words || [];
-        const promptClass = score >= 4 ? "prompt-word-high" : "prompt-word-med";
-
-        html += `<div class="report-item">`;
-        html += `<span class="${promptClass}">${promptWord}</span>`;
-        html += `<span class="arrow">→</span>`;
-        if (outputWords.length === 0) {
-          html += "<i>(No direct output words identified)</i>";
-        } else {
-          html += outputWords
-            .map(w => `<span class="output-word">${w}</span>`)
-            .join(" ");
-        }
-        html += "</div>";
-      });
-      return html;
-    }
-
-    function buildScoreHTML(scoreData) {
-      const rawScore =
-        scoreData && typeof scoreData.semantic_change_score === "number"
-          ? scoreData.semantic_change_score
-          : 0;
-      const score = Math.max(1, Math.min(10, rawScore || 1));
-      const summary =
-        (scoreData && scoreData.change_summary) || "No summary available.";
-
-      const red = Math.floor((score - 1) * (255 / 9));
-      const green = 255 - red;
-      const color = `rgb(${red}, ${green}, 0)`;
-
-      return `
-        <div class="change-report">
-          <strong>Impact Score (semantic_change_score)</strong>
-          <div class="score-bar-container">
-            <div class="score-bar-fill" style="width: ${score * 10}%; background-color: ${color};">
-              ${score} / 10
-            </div>
-          </div>
-          <div class="change-summary"><strong>Summary:</strong> ${summary}</div>
-        </div>
-      `;
-    }
-
-    function setStatus(el, message, isError = false) {
-      if (!el) return;
-      el.textContent = message;
-      el.style.color = isError ? "#f97373" : "var(--text-muted)";
-    }
-
-    function clearAllStatuses() {
-      [statusGenerate, statusAnalyze, statusAblation, statusCounterfactual].forEach(el => {
-        if (el) el.textContent = "";
-      });
-    }
-
-    function setLoading(isLoading) {
-      [bGenerate, bAnalyze, bAblate, bCounterfactual].forEach(btn => {
-        btn.disabled = isLoading || (btn === bAnalyze && !outputDisplay.value);
-      });
-    }
-
-    bGenerate.addEventListener("click", async () => {
-      clearAllStatuses();
-      setLoading(true);
-
-      appState.original_prompt = promptInput.value.trim();
-      experimentDisplay.innerHTML = "";
-      experimentDisplay.style.display = "none";
-      analysisDisplay.innerHTML =
-        "Click <b>Analyze Significance</b> to see the heatmap and key connections.";
-
-      if (!appState.original_prompt) {
-        setLoading(false);
-        setStatus(statusGenerate, "Please enter a prompt first.", true);
-        return;
-      }
+    function toggleExperimentButtons(enable) {
+      bAblate.disabled = !enable;
+      bCounterfactual.disabled = !enable;
       
-      // Check word count (proxy for tokens)
-      if (appState.original_prompt.split(/\s+/).length > 20) {
-        setLoading(false);
-        setStatus(statusGenerate, "Error: Keep the prompt less than 20.", true);
-        return;
+      if(enable) {
+        bAblate.title = "Ready to run";
+        bCounterfactual.title = "Ready to run";
+      } else {
+        const msg = "Please run Analysis (Step 3) first.";
+        bAblate.title = msg;
+        bCounterfactual.title = msg;
       }
+    }
 
-      setStatus(statusGenerate, "Generating output...");
+    function buildScoreHTML(changeData) {
+        // Visualizing the score
+        if (!changeData) return "";
+        return `<div style="margin-top:10px; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                  <strong>Change Score: ${changeData.semantic_change_score}/10</strong>
+                  <p style="font-size:0.8rem; margin-top:4px; color:#cbd5e1;">${changeData.change_summary || ""}</p>
+                </div>`;
+    }
+
+    // --- Handlers ---
+
+    // 1. GENERATE
+    bGenerate.addEventListener("click", async () => {
+      appState.prompt = promptInput.value.trim();
+      if(!appState.prompt) return setStatus("gen", "Please enter an instruction.", true);
+
+      // Reset downstream flow
+      appState.output = "";
+      appState.analysis = null;
+      outputDisplay.value = "";
+      analysisDisplay.innerHTML = "<i>Analysis data cleared. Please regenerate analysis.</i>";
+      experimentDisplay.style.display = "none";
+      
+      // LOCK downstream buttons
+      bAnalyze.disabled = true;
+      toggleExperimentButtons(false); 
+
+      setStatus("gen", "Thinking...");
+      bGenerate.disabled = true;
 
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: appState.original_prompt })
+          body: JSON.stringify({ prompt: appState.prompt })
         });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Server error ${res.status}`);
-        }
-
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        
+        if(data.error) throw new Error(data.error);
 
-        appState.original_output = data.output || "";
-        outputDisplay.value = appState.original_output;
-        appState.original_analysis = {};
-        bAnalyze.disabled = !appState.original_output;
-        setStatus(statusGenerate, "Output generated.");
-      } catch (err) {
-        console.error("Generate error:", err);
-        setStatus(statusGenerate, `${err.message}`, true);
+        appState.output = data.output;
+        outputDisplay.value = appState.output;
+        setStatus("gen", "Answer ready.");
+        
+        // Unlock next step
+        bAnalyze.disabled = false; 
+
+      } catch (e) {
+        setStatus("gen", "Error generating.", true);
+        console.error(e);
       } finally {
-        setLoading(false);
+        bGenerate.disabled = false;
       }
     });
 
+    // 2. ANALYZE
     bAnalyze.addEventListener("click", async () => {
-      clearAllStatuses();
+      if(!appState.output) return;
 
-      if (!appState.original_prompt || !appState.original_output) {
-        setStatus(statusAnalyze, "Generate an output first.", true);
-        return;
-      }
-
-      setLoading(true);
-      setStatus(statusAnalyze, "Analyzing prompt–output relationship...");
+      setStatus("ana", "Checking spotlight scores...");
+      bAnalyze.disabled = true;
 
       try {
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: appState.original_prompt,
-            output: appState.original_output
-          })
+          body: JSON.stringify({ prompt: appState.prompt, output: appState.output })
         });
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Server error ${res.status}: ${text}`);
-        }
-
         const data = await res.json();
-        appState.original_analysis = data;
+        appState.analysis = data;
 
-        if (data.error) {
-          analysisDisplay.innerHTML =
-            `<p style="color: #f97373; font-weight: 600;">Analysis failed:</p><pre>${data.error}</pre>`;
-          setStatus(statusAnalyze, "Analysis failed.", true);
-          return;
-        }
+        // Render Heatmap
+        let html = "<div>";
+        data.heatmap_data.forEach(w => {
+           let c = w.impact_score >= 4 ? 5 : (w.impact_score >= 3 ? 3 : 1);
+           html += `<span class="impact-badge impact-${c}">${w.word}</span> `;
+        });
+        html += "</div><p style='font-size:0.8rem; margin-top:8px; color:#94a3b8'>Red = High Impact (AI loved this word). Green = Low Impact (AI ignored this).</p>";
+        
+        analysisDisplay.innerHTML = html;
+        setStatus("ana", "Analysis complete.");
 
-        const heatmapHTML = buildHeatmapHTML(data.heatmap_data);
-        const reportHTML = buildReportHTML(data.connections);
+        // UNLOCK Experiment Buttons
+        toggleExperimentButtons(true);
+        
+        // Auto-fill suggestions
+        const highImpact = data.heatmap_data.filter(x => x.impact_score >= 4).map(x => x.word);
+        if(highImpact.length) ablationInput.value = highImpact.join(", ");
 
-        analysisDisplay.innerHTML = `
-          <h4>Prompt Heatmap</h4>
-          <details style="margin-bottom: 8px; font-size: 0.8rem;">
-            <summary><strong>How are heatmap scores (1–5) computed?</strong></summary>
-            <div style="margin-top: 4px;">
-              <p>An auxiliary model estimates how much each token affects the generated output. 1 = low impact, 5 = very high impact.</p>
-            </div>
-          </details>
-          ${heatmapHTML}
-          <h4 style="margin-top: 14px;">Significance Report</h4>
-          ${reportHTML}
-        `;
-
-        if (Array.isArray(data.heatmap_data)) {
-          const highImpactWords = data.heatmap_data
-            .filter(item => (item.impact_score || 0) >= 4 && item.word && /^[a-zA-Z0-9]+$/.test(item.word))
-            .map(item => item.word);
-          ablationInput.value = [...new Set(highImpactWords)].join(", ");
-        }
-
-        setStatus(statusAnalyze, "Analysis complete.");
-      } catch (err) {
-        console.error("Analyze error:", err);
-        setStatus(statusAnalyze, `Error: ${err.message}`, true);
+      } catch (e) {
+        setStatus("ana", "Analysis failed.", true);
       } finally {
-        setLoading(false);
+        bAnalyze.disabled = false;
       }
     });
 
+    // Generic Experiment Runner
     async function runExperiment(type) {
-      const statusEl = type === "ablation" ? statusAblation : statusCounterfactual;
-      clearAllStatuses();
+      const statusEl = type === 'ablation' ? statuses.abl : statuses.cnt;
+      const inputEl = type === 'ablation' ? ablationInput : counterfactualInput;
+      const btnEl = type === 'ablation' ? bAblate : bCounterfactual;
 
-      if (
-        !appState.original_prompt ||
-        !appState.original_output ||
-        !appState.original_analysis.heatmap_data
-      ) {
-        setStatus(
-          statusEl,
-          "Run <b>Generate Output</b> and <b>Analyze Significance</b> before experiments.",
-          true
-        );
+      const changes = inputEl.value.trim();
+      if(!changes) {
+        setStatus(type === 'ablation' ? "abl" : "cnt", "Please provide input first.", true);
         return;
       }
 
-      setLoading(true);
-      setStatus(statusEl, `Running ${type} study...`);
-      experimentDisplay.innerHTML = "";
-      experimentDisplay.style.display = "none";
-
-      let changes;
+      setStatus(type === 'ablation' ? "abl" : "cnt", "Running test...");
+      btnEl.disabled = true;
+      
       try {
-        if (type === "ablation") {
-          changes = ablationInput.value;
-          if (!changes.trim()) {
-            throw new Error("Enter at least one word to remove, e.g., formal, polite");
-          }
-        } else {
-          changes = counterfactualInput.value;
-          if (!changes.trim()) {
-            throw new Error("Enter at least one line like: formal, informal");
-          }
-        }
-      } catch (err) {
-        setLoading(false);
-        setStatus(statusEl, err.message, true);
-        return;
-      }
+         const res = await fetch("/api/run_experiment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                type: type, 
+                original_prompt: appState.prompt, 
+                original_output: appState.output,
+                changes: changes
+            })
+         });
+         const data = await res.json();
+         
+         // RENDER RESULT with USER FRIENDLY TEXT
+         experimentDisplay.style.display = "block";
+         
+         const scoreHTML = buildScoreHTML(data.change_data);
+         const beforeHTML = `<pre>${appState.prompt}</pre>`;
+         const afterHTML = `<pre>${data.new_prompt}</pre>`;
 
-      try {
-        const res = await fetch("/api/run_experiment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type,
-            original_prompt: appState.original_prompt,
-            original_output: appState.original_output,
-            changes
-          })
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Server error ${res.status}`);
-        }
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
-        experimentDisplay.style.display = "block";
-
-        const originalHeatmap = buildHeatmapHTML(appState.original_analysis.heatmap_data);
-        const originalReport = buildReportHTML(appState.original_analysis.connections);
-
-        const beforeHTML = `
-          <h3>Before</h3>
-          <b>Prompt</b>
-          <pre>${appState.original_prompt}</pre>
-          <b>Heatmap</b>
-          ${originalHeatmap}
-          <b>Significance</b>
-          ${originalReport}
-        `;
-
-        const newHeatmap = buildHeatmapHTML(data.new_analysis.heatmap_data);
-        const newReport = buildReportHTML(data.new_analysis.connections);
-
-        const afterHTML = `
-          <h3>After</h3>
-          <b>Prompt</b>
-          <pre>${data.new_prompt}</pre>
-          <b>Heatmap</b>
-          ${newHeatmap}
-          <b>Significance</b>
-          ${newReport}
-        `;
-
-        const scoreHTML = buildScoreHTML(data.change_data);
-
-        experimentDisplay.innerHTML = `
-          <h2 style="margin: 0 0 8px; font-size: 1.1rem;">${type.charAt(0).toUpperCase() + type.slice(1)} Study Results</h2>
+         experimentDisplay.innerHTML = `
+          <h2 style="margin: 0 0 8px; font-size: 1.1rem;">${type === 'ablation' ? 'Eraser Test' : 'Swap Test'} Results</h2>
+          
           <div class="compare-container">
-            <div class="compare-box compare-before">${beforeHTML}</div>
-            <div class="compare-box">${afterHTML}</div>
+            <div class="compare-box compare-before">
+              <strong>Original Instruction:</strong>
+              ${beforeHTML}
+            </div>
+            <div class="compare-box">
+              <strong>Modified Instruction:</strong>
+              ${afterHTML}
+            </div>
           </div>
+
           <hr style="margin-top: 14px; border-color: rgba(55, 65, 81, 0.8);" />
-          <h3 style="margin-top: 10px;">Change Analysis</h3>
+          
+          <h3 style="margin-top: 10px;">What Changed?</h3>
+          
           <details style="margin-bottom: 8px; font-size: 0.8rem;">
-            <summary><strong>How is the semantic change score (1–10) computed?</strong></summary>
-            <div style="margin-top: 4px;">
-              <p>An evaluator model compares original and new outputs, scoring how much the meaning, tone, or structure changed (1 = minimal, 10 = major shift).</p>
+            <summary><strong>What does the "Change Score" mean?</strong></summary>
+            <div style="margin-top: 4px; line-height: 1.5; color: #cbd5e1;">
+              <p>We asked an impartial AI judge to compare the two answers. It gives a score from 1 to 10 based on how different they are.</p>
+              <ul style="margin-top:4px; padding-left: 20px;">
+                 <li><strong>Low Score (1-3):</strong> The answers are basically the same. (The change didn't matter much).</li>
+                 <li><strong>High Score (7-10):</strong> The answer changed completely. (Your change had a huge impact).</li>
+              </ul>
             </div>
           </details>
+
           ${scoreHTML}
+
           <hr style="margin-top: 16px; border-color: rgba(55, 65, 81, 0.8);" />
-          <h3 style="margin-top: 10px;">Original Output</h3>
+          
+          <h3 style="margin-top: 10px;">Compare the Answers</h3>
+          
+          <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 5px;">Old Answer:</p>
           <pre>${appState.original_output}</pre>
-          <h3>New Output</h3>
+          
+          <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 5px; margin-top: 15px;">New Answer:</p>
           <pre>${data.new_output}</pre>
         `;
 
-        setStatus(statusEl, `${type.charAt(0).toUpperCase() + type.slice(1)} study complete.`);
-      } catch (err) {
-        console.error("Experiment error:", err);
-        setStatus(statusEl, `Error: ${err.message}`, true);
-        experimentDisplay.innerHTML =
-          `<p style="color: #f97373;"><strong>Error:</strong> ${err.message}</p>`;
-        experimentDisplay.style.display = "block";
+         experimentDisplay.scrollIntoView({ behavior: "smooth" });
+         setStatus(type === 'ablation' ? "abl" : "cnt", "Done.");
+
+      } catch(e) {
+         console.error(e);
+         setStatus(type === 'ablation' ? "abl" : "cnt", "Error.", true);
       } finally {
-        setLoading(false);
+         btnEl.disabled = false;
       }
     }
 
+    // 3. Connect Buttons to Experiment Runner
     bAblate.addEventListener("click", () => runExperiment("ablation"));
     bCounterfactual.addEventListener("click", () => runExperiment("counterfactual"));
+
   </script>
 </body>
 </html>
