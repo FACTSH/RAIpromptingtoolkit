@@ -10,7 +10,7 @@
       "use": "@vercel/static"
     },
     {
-      "src": "factsh.png",
+      "src": "factsh.jpeg",
       "use": "@vercel/static"
     }
   ],
