@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Responsible Prompting Toolkit</title>
+  <title>Smart Prompt Studio – Simplified</title>
   
-  <link rel="icon" type="image/png" href="factsh.jpeg" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
 
   <style>
+    /* CSS remains exactly the same to preserve layout */
     :root {
       --bg: #020617;
-      --bg-elevated: #020617;
       --card-bg: rgba(15, 23, 42, 0.98);
       --card-border: rgba(148, 163, 184, 0.4);
       --card-border-soft: rgba(148, 163, 184, 0.15);
@@ -18,24 +18,15 @@
       --text-muted: #9ca3af;
       --accent-primary: #6366f1;
       --accent-secondary: #22c55e;
-      --accent-warn: #f97316;
-      --accent-info: #06b6d4;
-      --danger: #f97373;
-      --field-bg: #020617;
-      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
-        Roboto, "Helvetica Neue", Arial, sans-serif;
-      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --radius-lg: 20px;
       --radius-md: 10px;
       --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.9);
-      --shadow-button: 0 10px 30px rgba(15, 23, 42, 0.7);
       --transition-fast: 0.18s ease-out;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -44,975 +35,537 @@
       color: var(--text-primary);
       background:
         radial-gradient(circle at top, #1d2748 0, transparent 55%),
-        radial-gradient(circle at top right, #4c1d95 0, transparent 50%),
         radial-gradient(circle at bottom left, #0f766e 0, transparent 50%),
         var(--bg);
       min-height: 100vh;
     }
 
     /* Header */
-
     header {
       max-width: 1280px;
-      margin: 0 auto 28px;
+      margin: 0 auto 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .header-content {
       display: flex;
-      align-items: center;
-      gap: 20px;
+      gap: 24px;
+      align-items: flex-start;
     }
 
     #app-logo {
-      height: 128px; 
-      width: 128px; 
-      border-radius: 32px; 
-      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.9);
+      height: 100px; 
+      width: 100px; 
+      border-radius: 24px; 
+      background: #1e293b;
       object-fit: cover;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: #020617;
-    }
-
-    .header-text {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
     }
 
     .header-text h1 {
-      margin: 0;
-      font-size: 2.1rem;
-      letter-spacing: 0.04em;
+      margin: 0 0 8px 0;
+      font-size: 2.2rem;
       font-weight: 700;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .header-text p {
-      margin: 0;
-      font-size: 0.95rem;
+      margin: 0 0 16px 0;
+      font-size: 1rem;
       color: var(--text-muted);
-      max-width: 520px;
+      line-height: 1.5;
+      max-width: 700px;
     }
 
-    /* Grid Layout */
+    /* Significance Box in Header */
+    .significance-box {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-left: 4px solid var(--accent-primary);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      max-width: 800px;
+    }
+    .significance-box strong { color: #818cf8; }
 
+    /* Grid Layout */
     .bento-grid {
       max-width: 1280px;
       margin: 0 auto;
       display: grid;
       grid-template-columns: 1.1fr 1.4fr;
-      grid-template-rows: auto auto auto;
-      gap: 18px;
+      gap: 20px;
     }
 
     .bento-item {
-      position: relative;
       background: radial-gradient(circle at top left, #111827 0, #020617 70%);
       border-radius: var(--radius-lg);
-      padding: 20px 20px 18px;
+      padding: 24px;
       border: 1px solid var(--card-border-soft);
       box-shadow: var(--shadow-soft);
       display: flex;
       flex-direction: column;
       gap: 12px;
-      overflow: hidden;
-      isolation: isolate;
-      transition: transform var(--transition-fast),
-        box-shadow var(--transition-fast), border-color var(--transition-fast),
-        background var(--transition-fast);
-    }
-
-    .bento-item::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top left,
-          rgba(99, 102, 241, 0.18),
-          transparent 55%);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease-out;
-      z-index: -1;
+      position: relative;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
     }
 
     .bento-item:hover {
-      transform: translateY(-3px);
       border-color: var(--card-border);
-      box-shadow: 0 20px 55px rgba(15, 23, 42, 0.95);
+      transform: translateY(-2px);
     }
 
-    .bento-item:hover::before {
-      opacity: 1;
-    }
+    /* Specific Grid Areas */
+    .bento-prompt { grid-column: 1; grid-row: 1 / span 2; }
+    .bento-output { grid-column: 2; grid-row: 1; }
+    .bento-analysis { grid-column: 2; grid-row: 2; }
+    .bento-ablation { grid-column: 1; grid-row: 3; }
+    .bento-counterfactual { grid-column: 2; grid-row: 3; }
+    .bento-preview { grid-column: 1 / span 2; grid-row: 4; display: none; }
 
-    .bento-prompt {
-      grid-row: 1 / span 2;
-      grid-column: 1;
-    }
-
-    .bento-output {
-      grid-row: 1;
-      grid-column: 2;
-    }
-
-    .bento-analysis {
-      grid-row: 2;
-      grid-column: 2;
-    }
-
-    .bento-ablation {
-      grid-row: 3;
-      grid-column: 1;
-    }
-
-    .bento-counterfactual {
-      grid-row: 3;
-      grid-column: 2;
-    }
-
-    .bento-preview {
-      grid-column: 1 / span 2;
-      grid-row: 4;
-      margin-top: 4px;
-      display: none;
-    }
-
+    /* Typography */
     h3 {
       margin: 0;
-      font-size: 1.05rem;
+      font-size: 1.1rem;
       font-weight: 600;
-      letter-spacing: 0.03em;
       text-transform: uppercase;
       color: #c7d2fe;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
 
     h3 span.step {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 20px;
-      border-radius: 999px;
-      background: rgba(79, 70, 229, 0.16);
-      border: 1px solid rgba(129, 140, 248, 0.35);
-      font-size: 0.7rem;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(79, 70, 229, 0.2);
+      border: 1px solid rgba(129, 140, 248, 0.4);
+      font-size: 0.75rem;
       color: #e5e7eb;
     }
 
-    p.description {
-      margin: 0;
-      font-size: 0.9rem;
-      color: var(--text-muted);
+    /* Educational Context Blocks */
+    .edu-context {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(71, 85, 105, 0.6);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
     }
+    
+    .edu-context summary {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      cursor: pointer;
+      list-style: none;
+    }
+    
+    .edu-context summary:hover { color: #e2e8f0; }
+    .edu-context summary::after { content: " +"; font-weight: bold; }
+    .edu-context[open] summary::after { content: " -"; }
 
-    /* Fields */
+    .edu-content {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .edu-content b { color: #818cf8; }
 
-    textarea,
-    input[type="text"] {
+    /* Inputs & Buttons */
+    textarea, input[type="text"] {
       width: 100%;
-      padding: 11px 12px;
+      padding: 12px;
       border-radius: var(--radius-md);
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      background: radial-gradient(circle at top left,
-          #020617 0,
-          #020617 60%,
-          #020617 100%);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: #0f172a;
       color: var(--text-primary);
       font-family: var(--font-mono);
-      font-size: 0.85rem;
-      resize: vertical;
-      min-height: 120px;
+      font-size: 0.9rem;
       outline: none;
-      transition: border-color 0.16s ease-out,
-        box-shadow 0.16s ease-out, background 0.16s ease-out;
     }
-
-    input[type="text"] {
-      min-height: auto;
-      font-size: 0.86rem;
+    
+    textarea:focus, input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
     }
-
-    textarea::placeholder,
-    input[type="text"]::placeholder {
-      color: rgba(148, 163, 184, 0.7);
-    }
-
-    textarea:focus,
-    input[type="text"]:focus {
-      border-color: rgba(129, 140, 248, 0.85);
-      box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.55);
-      background: #020617;
-    }
-
-    #output-display {
-      min-height: 110px;
-      background: #020617;
-    }
-
-    /* Buttons */
 
     button {
       border: none;
       border-radius: 999px;
-      padding: 10px 18px;
+      padding: 10px 20px;
       font-size: 0.9rem;
       font-weight: 600;
-      letter-spacing: 0.02em;
       cursor: pointer;
-      display: inline-flex;
+      color: white;
+      transition: all 0.2s;
+      display: flex;
       align-items: center;
-      justify-content: center;
       gap: 8px;
-      color: #f9fafb;
-      background: var(--accent-primary);
-      box-shadow: var(--shadow-button);
-      transition: transform var(--transition-fast),
-        box-shadow var(--transition-fast), filter var(--transition-fast),
-        opacity var(--transition-fast);
-    }
-
-    button svg {
-      flex-shrink: 0;
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      filter: brightness(1.05);
-      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.95);
-    }
-
-    button:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.9);
+      width: fit-content;
     }
 
     button:disabled {
-      opacity: 0.45;
-      cursor: default;
-      box-shadow: none;
+      background: #334155 !important;
+      color: #94a3b8;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
     }
 
-    #b-generate {
-      align-self: flex-start;
-      background: linear-gradient(120deg, #6366f1, #4f46e5);
-    }
+    #b-generate { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    #b-analyze { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    #b-ablate { background: linear-gradient(135deg, #f97316, #ea580c); }
+    #b-counterfactual { background: linear-gradient(135deg, #06b6d4, #0891b2); }
 
-    #b-analyze {
-      background: linear-gradient(120deg, #22c55e, #16a34a);
-    }
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
 
-    #b-ablate {
-      background: linear-gradient(120deg, #f97316, #ea580c);
-    }
-
-    #b-counterfactual {
-      background: linear-gradient(120deg, #06b6d4, #0891b2);
-    }
-
-    .status-line {
-      min-height: 1.1em;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    /* Details / helper text */
-
-    details {
-      margin-top: 6px;
-      padding: 8px 10px;
-      border-radius: 12px;
-      border: 1px dashed rgba(148, 163, 184, 0.4);
-      background: radial-gradient(circle at top left,
-          rgba(30, 64, 175, 0.3),
-          rgba(15, 23, 42, 0.98));
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    summary {
-      cursor: pointer;
-      font-weight: 500;
-      color: #e5e7eb;
-      outline: none;
-    }
-
-    summary::-webkit-details-marker {
-      display: none;
-    }
-
-    summary::before {
-      content: "◆";
-      margin-right: 6px;
-      font-size: 0.6rem;
-      color: rgba(129, 140, 248, 0.85);
-    }
-
-    /* Analysis / Preview content */
-
-    h4 {
-      margin: 4px 0 6px;
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-
-    pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      background: #020617;
-      border-radius: 12px;
-      padding: 10px 12px;
-      border: 1px solid rgba(15, 23, 42, 0.9);
-      margin: 8px 0;
-    }
-
-    .report-item {
-      border-bottom: 1px dashed rgba(55, 65, 81, 0.85);
-      padding: 6px 0 8px;
-      margin-bottom: 2px;
-      font-size: 0.85rem;
-    }
-
-    .prompt-word-high,
-    .prompt-word-med {
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-weight: 600;
-      margin-right: 2px;
-    }
-
-    .prompt-word-high {
-      background: rgba(239, 68, 68, 0.95);
-      color: #fef2f2;
-    }
-
-    .prompt-word-med {
-      background: rgba(234, 179, 8, 0.82);
-      color: #111827;
-    }
-
-    .output-word {
-      background: rgba(15, 23, 42, 0.95);
-      padding: 2px 5px;
-      border-radius: 999px;
-      font-family: var(--font-mono);
-      margin: 0 2px 2px 0;
+    /* Visualization Styles */
+    .status-line { font-size: 0.8rem; color: #94a3b8; min-height: 1.2em; margin-top: 4px; }
+    
+    .impact-badge {
       display: inline-block;
-    }
-
-    .arrow {
-      margin: 0 6px;
-      color: var(--text-muted);
-    }
-
-    /* Heatmap */
-
-    .impact-1,
-    .impact-2,
-    .impact-3,
-    .impact-4,
-    .impact-5 {
       padding: 2px 6px;
-      border-radius: 999px;
-      margin: 0 2px 3px 0;
-      display: inline-block;
-      font-size: 0.8rem;
-    }
-
-    .impact-1 {
-      background: rgba(34, 197, 94, 0.14);
-    }
-
-    .impact-2 {
-      background: rgba(34, 197, 94, 0.28);
-    }
-
-    .impact-3 {
-      background: rgba(234, 179, 8, 0.4);
-    }
-
-    .impact-4 {
-      background: rgba(248, 113, 113, 0.7);
-      color: #fef2f2;
-    }
-
-    .impact-5 {
-      background: rgba(220, 38, 38, 0.98);
-      color: #fef2f2;
-    }
-
-    .change-report {
-      border-radius: 14px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: radial-gradient(circle at top left,
-          rgba(59, 130, 246, 0.15),
-          rgba(15, 23, 42, 1));
-      padding: 12px 14px;
+      border-radius: 4px;
+      margin: 2px;
       font-size: 0.85rem;
     }
-
-    .score-bar-container {
-      border-radius: 999px;
-      overflow: hidden;
-      background: #020617;
-      margin-top: 6px;
-      border: 1px solid rgba(15, 23, 42, 0.9);
-    }
-
-    .score-bar-fill {
-      height: 22px;
-      line-height: 22px;
-      font-size: 0.78rem;
-      text-align: center;
-      font-weight: 600;
-      color: #f9fafb;
-      transition: width 0.3s ease-out;
-    }
-
-    .change-summary {
-      margin-top: 8px;
-      font-style: italic;
-      color: var(--text-muted);
-    }
-
-    .compare-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-top: 10px;
-    }
-
-    .compare-box {
-      flex: 1 1 280px;
-      padding: 10px 0;
-      font-size: 0.85rem;
-    }
-
-    .compare-before {
-      border-right: 1px dashed rgba(55, 65, 81, 0.9);
-      padding-right: 16px;
-    }
-
-    .compare-before h3,
-    .compare-box h3 {
-      text-transform: none;
-      letter-spacing: 0.02em;
-      font-size: 0.98rem;
-      color: #c7d2fe;
-      margin-bottom: 4px;
-    }
+    .impact-5 { background: rgba(220, 38, 38, 0.9); color: white; } /* High */
+    .impact-4 { background: rgba(248, 113, 113, 0.7); color: white; }
+    .impact-3 { background: rgba(234, 179, 8, 0.5); color: white; }
+    .impact-1 { background: rgba(34, 197, 94, 0.2); color: #bbf7d0; } /* Low */
 
     /* Responsive */
-
-    @media (max-width: 1100px) {
-      .bento-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .bento-prompt,
-      .bento-output,
-      .bento-analysis,
-      .bento-ablation,
-      .bento-counterfactual {
-        grid-column: 1;
-        grid-row: auto;
-      }
-
-      .bento-preview {
-        grid-column: 1;
-      }
-
-      .bento-prompt {
-        order: 1;
-      }
-
-      .bento-output {
-        order: 2;
-      }
-
-      .bento-analysis {
-        order: 3;
-      }
-
-      .bento-ablation,
-      .bento-counterfactual {
-        order: 4;
-      }
-    }
-
-    @media (max-width: 768px) {
-      body {
-        padding: 20px 12px 28px;
-      }
-
-      header {
-        flex-direction: row;
-        align-items: center;
-      }
-
-      .header-text h1 {
-        font-size: 1.5rem;
-      }
-
-      #app-logo {
-        height: 96px; 
-        width: 96px; 
-        border-radius: 24px; 
-      }
-    }
-
-    @media (max-width: 540px) {
-      header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .header-text h1 {
-        font-size: 1.35rem;
-      }
-
-      .header-text p {
-        font-size: 0.86rem;
+    @media (max-width: 1024px) {
+      .bento-grid { grid-template-columns: 1fr; }
+      .bento-prompt, .bento-output, .bento-analysis, .bento-ablation, .bento-counterfactual {
+        grid-column: 1; grid-row: auto;
       }
     }
   </style>
 </head>
 <body>
+
   <header>
-    <img src="factsh.jpeg" alt="Logo" id="app-logo" />
-    <div class="header-text">
-      <h1>Responsible Prompting Toolkit</h1>
-      <p>Explore how small changes in your prompt affect a model’s behavior through analysis,
-        removal, and replacement experiments.</p>
+    <div class="header-content">
+      <img src="factsh.jpeg" alt="AI Tool Logo" id="app-logo" />
+      <div class="header-text">
+        <h1>Smart Prompt Studio</h1>
+        <p>A simple workspace to "tune" your AI instructions.  Just like tuning a radio, we help you find the clearest signal so the AI does exactly what you want, without guessing.</p>
+        
+        <div class="significance-box">
+          <strong>Why this matters:</strong> AI can sometimes act like a black box. This tool opens it up. We help you <strong>Spotlight</strong> what matters, <strong>Erase</strong> clutter, and <strong>Test</strong> different scenarios to make sure your instruction is bulletproof.
+        </div>
+      </div>
     </div>
   </header>
 
   <div class="bento-grid">
+    
     <div class="bento-item bento-prompt">
-      <h3><span class="step">1</span>Prompt</h3>
-      <p class="description">Start by entering your prompt. The clearer the intent, the easier it is to interpret the
-        analysis.</p>
-      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email (20 word limit)">Write a short, formal, and polite email to my manager about a sick day.</textarea>
-      <button id="b-generate">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
-          <path
-            d="M8.5 1.134a1 1 0 0 0-1 0L1.5 4.366A1 1 0 0 0 1 5.237v5.526a1 1 0 0 0 .5.871l6 3.232a1 1 0 0 0 1 0l6-3.232a1 1 0 0 0 .5-.871V5.237a1 1 0 0 0-.5-.871z" />
-        </svg>
-        Generate Output
-      </button>
+      <h3><span class="step">1</span>Your Instruction</h3>
+      
+      <details class="edu-context" open>
+        <summary>What is this?</summary>
+        <div class="edu-content">
+          <br>
+          <b>The Recipe:</b> This is the command you give the AI. <br>
+          <b>Why:</b> Vague instructions are like a bad recipe—the result will be messy. We need to be precise.<br>
+        </div>
+      </details>
+
+      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email to my manager about a sick day.">Write a short, formal, and polite email to my manager about a sick day.</textarea>
+      <button id="b-generate">Get Answer</button>
       <div id="status-generate" class="status-line"></div>
     </div>
 
     <div class="bento-item bento-output">
-      <h3><span class="step">2</span>Output</h3>
-      <p class="description">The model’s response appears here. Once you’re satisfied, run the analysis.</p>
-      <textarea id="output-display" placeholder="Output will appear here... (50 token limit)" readonly></textarea>
-      <button id="b-analyze" disabled>
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
-          <path
-            d="M3 4a1 1 0 0 1 1-1h8.5a.5.5 0 0 1 .4.8L11 7l1.9 3.2a.5.5 0 0 1-.4.8H4a1 1 0 0 1-1-1z" />
-        </svg>
-        Analyze Significance
-      </button>
+      <h3><span class="step">2</span>The AI's Answer</h3>
+      
+      <details class="edu-context">
+        <summary>What is this?</summary>
+        <div class="edu-content">
+           <br>
+          <b>The Draft:</b> This is what the AI wrote based on your recipe.<br>
+          <b>Why:</b> We need this first draft to check if the AI actually listened to you (e.g., was it actually "polite"?).
+        </div>
+      </details>
+
+      <textarea id="output-display" readonly placeholder="Answer appears here..."></textarea>
+      <button id="b-analyze" disabled>Analyze This</button>
       <div id="status-analyze" class="status-line"></div>
     </div>
 
     <div class="bento-item bento-analysis">
-      <h3><span class="step">3</span>Analysis</h3>
-      <p class="description">Heatmap scores highlight impactful words; the report links them to specific pieces of the
-        output.</p>
-      <div id="analysis-report-display">Click <b>Analyze Significance</b> to see the heatmap and key connections.</div>
+      <h3><span class="step">3</span>Spotlight Check</h3>
+      
+      <details class="edu-context" open>
+        <summary>How does this work?</summary>
+        <div class="edu-content">
+          <br>
+          <b>The Thermal Camera:</b> We highlight words in Red (Hot) or Green (Cold).<br>
+          <b>Why:</b> Red words are what the AI focused on. If your most important instruction is Green, the AI ignored it!
+        </div>
+      </details>
+
+      <div id="analysis-report-display" style="margin-top:10px; font-size:0.9rem; color:#cbd5e1;">
+        <i>Complete Step 2 to unlock the spotlight.</i>
+      </div>
     </div>
 
     <div class="bento-item bento-ablation">
-      <h3><span class="step">A</span>Component analysis (Remove)</h3>
-      <p class="description">Remove words to test how much they actually matter to the model’s behavior.</p>
-      <input type="text" id="ablation-input" placeholder="e.g., formal, polite" />
-      <details>
-        <summary>What does it show?</summary>
-        <p>We remove words (e.g., <code>formal</code>) and compare the outputs. Big changes mean the word carries real
-          weight. Small changes suggest the model is ignoring it.</p>
+      <h3><span class="step">A</span>The "Eraser" Test</h3>
+      
+      <details class="edu-context">
+        <summary>Why use this?</summary>
+        <div class="edu-content">
+          <br>
+          <b>Less is More:</b> We delete a word (like "polite") and ask the AI again.<br>
+          <b>Why:</b> If deleting the word changes nothing, then that word was useless. Keep your instructions clean!
+        </div>
       </details>
-      <button id="b-ablate">Run Study</button>
-      <div id="status-ablation" class="status-line"></div>
+
+      <input type="text" id="ablation-input" placeholder="Words to erase (auto-filled after analysis)" />
+      <button id="b-ablate" disabled>Run Test</button> <div id="status-ablation" class="status-line"></div>
     </div>
 
     <div class="bento-item bento-counterfactual">
-      <h3><span class="step">B</span>Alternative scenario reasoning(Replace)</h3>
-      <p class="description">Swap terms with “what-if” alternatives to see how the model’s tone or content shifts.</p>
-      <textarea id="counterfactual-input" style="min-height: 80px;"
-        placeholder="formal, informal&#10;polite, rude"></textarea>
-      <details>
-        <summary>How do replacements work?</summary>
-        <p>Each line is a pair like <code>formal, informal</code>. We replace those words in your prompt, rerun the
-          model, then compare outputs and analysis.</p>
+      <h3><span class="step">B</span>The "Swap" Test</h3>
+      
+      <details class="edu-context">
+        <summary>Why use this?</summary>
+        <div class="edu-content">
+          <br>
+          <b>The Flip:</b> We swap a word for its opposite (e.g., "formal" → "casual").<br>
+          <b>Why:</b> To check understanding. If you ask for "rude" instead of "polite", does the AI actually change its tone?
+        </div>
       </details>
-      <button id="b-counterfactual">Run replacement Study</button>
-      <div id="status-counterfactual" class="status-line"></div>
+
+      <textarea id="counterfactual-input" style="min-height: 60px;" placeholder="formal, informal&#10;polite, rude"></textarea>
+      <button id="b-counterfactual" disabled>Run Test</button> <div id="status-counterfactual" class="status-line"></div>
     </div>
 
     <div class="bento-item bento-preview" id="experiment-display"></div>
   </div>
 
   <script>
+    // --- Elements ---
     const promptInput = document.getElementById("prompt-input");
     const outputDisplay = document.getElementById("output-display");
     const ablationInput = document.getElementById("ablation-input");
     const counterfactualInput = document.getElementById("counterfactual-input");
+    const analysisDisplay = document.getElementById("analysis-report-display");
+    const experimentDisplay = document.getElementById("experiment-display");
 
     const bGenerate = document.getElementById("b-generate");
     const bAnalyze = document.getElementById("b-analyze");
     const bAblate = document.getElementById("b-ablate");
     const bCounterfactual = document.getElementById("b-counterfactual");
 
-    const statusGenerate = document.getElementById("status-generate");
-    const statusAnalyze = document.getElementById("status-analyze");
-    const statusAblation = document.getElementById("status-ablation");
-    const statusCounterfactual = document.getElementById("status-counterfactual");
-
-    const analysisDisplay = document.getElementById("analysis-report-display");
-    const experimentDisplay = document.getElementById("experiment-display");
-
-    const appState = {
-      original_prompt: "",
-      original_output: "",
-      original_analysis: {}
+    const statuses = {
+      gen: document.getElementById("status-generate"),
+      ana: document.getElementById("status-analyze"),
+      abl: document.getElementById("status-ablation"),
+      cnt: document.getElementById("status-counterfactual")
     };
 
-    function buildHeatmapHTML(heatmapData) {
-      if (!Array.isArray(heatmapData) || heatmapData.length === 0) {
-        return "<p><i>No heatmap data available.</i></p>";
+    // --- State ---
+    let appState = {
+      prompt: "",
+      output: "",
+      analysis: null
+    };
+
+    // --- Helpers ---
+    function setStatus(key, msg, error = false) {
+      if(statuses[key]) {
+        statuses[key].textContent = msg;
+        statuses[key].style.color = error ? "#f87171" : "#94a3b8";
       }
-      let html = "<div style='line-height: 1.9;'>";
-      heatmapData.forEach(item => {
-        const word = item.word || "";
-        const score = item.impact_score || 0;
-        const clamped = Math.max(1, Math.min(5, score));
-        html += `<span class="impact-${clamped}">${word}</span>`;
-      });
-      html += "</div>";
-      return html;
     }
 
-    function buildReportHTML(connectionsData) {
-      if (!Array.isArray(connectionsData) || connectionsData.length === 0) {
-        return "<p><i>No key connections identified.</i></p>";
-      }
-      let html = "";
-      connectionsData.forEach(item => {
-        const promptWord = item.prompt_word || "N/A";
-        const score = item.impact_score || 0;
-        const outputWords = item.influenced_output_words || [];
-        const promptClass = score >= 4 ? "prompt-word-high" : "prompt-word-med";
-
-        html += `<div class="report-item">`;
-        html += `<span class="${promptClass}">${promptWord}</span>`;
-        html += `<span class="arrow">→</span>`;
-        if (outputWords.length === 0) {
-          html += "<i>(No direct output words identified)</i>";
-        } else {
-          html += outputWords
-            .map(w => `<span class="output-word">${w}</span>`)
-            .join(" ");
-        }
-        html += "</div>";
-      });
-      return html;
-    }
-
-    function buildScoreHTML(scoreData) {
-      const rawScore =
-        scoreData && typeof scoreData.semantic_change_score === "number"
-          ? scoreData.semantic_change_score
-          : 0;
-      const score = Math.max(1, Math.min(10, rawScore || 1));
-      const summary =
-        (scoreData && scoreData.change_summary) || "No summary available.";
-
-      const red = Math.floor((score - 1) * (255 / 9));
-      const green = 255 - red;
-      const color = `rgb(${red}, ${green}, 0)`;
-
-      return `
-        <div class="change-report">
-          <strong>Impact Score (semantic_change_score)</strong>
-          <div class="score-bar-container">
-            <div class="score-bar-fill" style="width: ${score * 10}%; background-color: ${color};">
-              ${score} / 10
-            </div>
-          </div>
-          <div class="change-summary"><strong>Summary:</strong> ${summary}</div>
-        </div>
-      `;
-    }
-
-    function setStatus(el, message, isError = false) {
-      if (!el) return;
-      el.textContent = message;
-      el.style.color = isError ? "#f97373" : "var(--text-muted)";
-    }
-
-    function clearAllStatuses() {
-      [statusGenerate, statusAnalyze, statusAblation, statusCounterfactual].forEach(el => {
-        if (el) el.textContent = "";
-      });
-    }
-
-    function setLoading(isLoading) {
-      [bGenerate, bAnalyze, bAblate, bCounterfactual].forEach(btn => {
-        btn.disabled = isLoading || (btn === bAnalyze && !outputDisplay.value);
-      });
-    }
-
-    bGenerate.addEventListener("click", async () => {
-      clearAllStatuses();
-      setLoading(true);
-
-      appState.original_prompt = promptInput.value.trim();
-      experimentDisplay.innerHTML = "";
-      experimentDisplay.style.display = "none";
-      analysisDisplay.innerHTML =
-        "Click <b>Analyze Significance</b> to see the heatmap and key connections.";
-
-      if (!appState.original_prompt) {
-        setLoading(false);
-        setStatus(statusGenerate, "Please enter a prompt first.", true);
-        return;
-      }
+    function toggleExperimentButtons(enable) {
+      bAblate.disabled = !enable;
+      bCounterfactual.disabled = !enable;
       
-      // Check word count (proxy for tokens)
-      if (appState.original_prompt.split(/\s+/).length > 20) {
-        setLoading(false);
-        setStatus(statusGenerate, "Error: Keep the prompt less than 20.", true);
-        return;
+      if(enable) {
+        bAblate.title = "Ready to run";
+        bCounterfactual.title = "Ready to run";
+      } else {
+        const msg = "Please run Analysis (Step 3) first.";
+        bAblate.title = msg;
+        bCounterfactual.title = msg;
       }
+    }
 
-      setStatus(statusGenerate, "Generating output...");
+    // --- Handlers ---
+
+    // 1. GENERATE
+    bGenerate.addEventListener("click", async () => {
+      appState.prompt = promptInput.value.trim();
+      if(!appState.prompt) return setStatus("gen", "Please enter a prompt.", true);
+
+      // Reset downstream flow
+      appState.output = "";
+      appState.analysis = null;
+      outputDisplay.value = "";
+      analysisDisplay.innerHTML = "<i>Analysis data cleared. Please regenerate analysis.</i>";
+      experimentDisplay.style.display = "none";
+      
+      // LOCK downstream buttons
+      bAnalyze.disabled = true;
+      toggleExperimentButtons(false); 
+
+      setStatus("gen", "Thinking...");
+      bGenerate.disabled = true;
 
       try {
+        // Simulating API call
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: appState.original_prompt })
+          body: JSON.stringify({ prompt: appState.prompt })
         });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Server error ${res.status}`);
-        }
-
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        
+        if(data.error) throw new Error(data.error);
 
-        appState.original_output = data.output || "";
-        outputDisplay.value = appState.original_output;
-        appState.original_analysis = {};
-        bAnalyze.disabled = !appState.original_output;
-        setStatus(statusGenerate, "Output generated.");
-      } catch (err) {
-        console.error("Generate error:", err);
-        setStatus(statusGenerate, `${err.message}`, true);
+        appState.output = data.output;
+        outputDisplay.value = appState.output;
+        setStatus("gen", "Done.");
+        
+        // Unlock next step
+        bAnalyze.disabled = false; 
+
+      } catch (e) {
+        setStatus("gen", "Error generating.", true);
+        console.error(e);
       } finally {
-        setLoading(false);
+        bGenerate.disabled = false;
       }
     });
 
+    // 2. ANALYZE
     bAnalyze.addEventListener("click", async () => {
-      clearAllStatuses();
+      if(!appState.output) return;
 
-      if (!appState.original_prompt || !appState.original_output) {
-        setStatus(statusAnalyze, "Generate an output first.", true);
-        return;
-      }
-
-      setLoading(true);
-      setStatus(statusAnalyze, "Analyzing prompt–output relationship...");
+      setStatus("ana", "Checking impact scores...");
+      bAnalyze.disabled = true;
 
       try {
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: appState.original_prompt,
-            output: appState.original_output
-          })
+          body: JSON.stringify({ prompt: appState.prompt, output: appState.output })
         });
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Server error ${res.status}: ${text}`);
-        }
-
         const data = await res.json();
-        appState.original_analysis = data;
+        appState.analysis = data;
 
-        if (data.error) {
-          analysisDisplay.innerHTML =
-            `<p style="color: #f97373; font-weight: 600;">Analysis failed:</p><pre>${data.error}</pre>`;
-          setStatus(statusAnalyze, "Analysis failed.", true);
-          return;
-        }
+        // Render Heatmap
+        let html = "<div>";
+        data.heatmap_data.forEach(w => {
+           let c = w.impact_score >= 4 ? 5 : (w.impact_score >= 3 ? 3 : 1);
+           html += `<span class="impact-badge impact-${c}">${w.word}</span> `;
+        });
+        html += "</div><p style='font-size:0.8rem; margin-top:8px; color:#94a3b8'>Red = High Impact (AI loved this word). Green = Low Impact (AI ignored this).</p>";
+        
+        analysisDisplay.innerHTML = html;
+        setStatus("ana", "Analysis complete.");
 
-        const heatmapHTML = buildHeatmapHTML(data.heatmap_data);
-        const reportHTML = buildReportHTML(data.connections);
+        // UNLOCK Experiment Buttons
+        toggleExperimentButtons(true);
+        
+        // Auto-fill suggestions
+        const highImpact = data.heatmap_data.filter(x => x.impact_score >= 4).map(x => x.word);
+        if(highImpact.length) ablationInput.value = highImpact.join(", ");
 
-        analysisDisplay.innerHTML = `
-          <h4>Prompt Heatmap</h4>
-          <details style="margin-bottom: 8px; font-size: 0.8rem;">
-            <summary><strong>How are heatmap scores (1–5) computed?</strong></summary>
-            <div style="margin-top: 4px;">
-              <p>An auxiliary model estimates how much each token affects the generated output. 1 = low impact, 5 = very high impact.</p>
-            </div>
-          </details>
-          ${heatmapHTML}
-          <h4 style="margin-top: 14px;">Significance Report</h4>
-          ${reportHTML}
-        `;
-
-        if (Array.isArray(data.heatmap_data)) {
-          const highImpactWords = data.heatmap_data
-            .filter(item => (item.impact_score || 0) >= 4 && item.word && /^[a-zA-Z0-9]+$/.test(item.word))
-            .map(item => item.word);
-          ablationInput.value = [...new Set(highImpactWords)].join(", ");
-        }
-
-        setStatus(statusAnalyze, "Analysis complete.");
-      } catch (err) {
-        console.error("Analyze error:", err);
-        setStatus(statusAnalyze, `Error: ${err.message}`, true);
+      } catch (e) {
+        setStatus("ana", "Analysis failed.", true);
       } finally {
-        setLoading(false);
+        bAnalyze.disabled = false;
       }
     });
 
-    async function runExperiment(type) {
-      const statusEl = type === "ablation" ? statusAblation : statusCounterfactual;
-      clearAllStatuses();
-
-      if (
-        !appState.original_prompt ||
-        !appState.original_output ||
-        !appState.original_analysis.heatmap_data
-      ) {
-        setStatus(
-          statusEl,
-          "Run <b>Generate Output</b> and <b>Analyze Significance</b> before experiments.",
-          true
-        );
-        return;
-      }
-
-      setLoading(true);
-      setStatus(statusEl, `Running ${type} study...`);
-      experimentDisplay.innerHTML = "";
-      experimentDisplay.style.display = "none";
-
-      let changes;
+    // 3. ABLATION (Clarity Check)
+    bAblate.addEventListener("click", async () => {
+      setStatus("abl", "Running simplicity test...");
+      bAblate.disabled = true;
+      
       try {
-        if (type === "ablation") {
-          changes = ablationInput.value;
-          if (!changes.trim()) {
-            throw new Error("Enter at least one word to remove, e.g., formal, polite");
-          }
-        } else {
-          changes = counterfactualInput.value;
-          if (!changes.trim()) {
-            throw new Error("Enter at least one line like: formal, informal");
-          }
-        }
-      } catch (err) {
-        setLoading(false);
-        setStatus(statusEl, err.message, true);
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/run_experiment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type,
-            original_prompt: appState.original_prompt,
-            original_output: appState.original_output,
-            changes
-          })
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Server error ${res.status}`);
-        }
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
-        experimentDisplay.style.display = "block";
-
-        const originalHeatmap = buildHeatmapHTML(appState.original_analysis.heatmap_data);
-        const originalReport = buildReportHTML(appState.original_analysis.connections);
-
-        const beforeHTML = `
-          <h3>Before</h3>
-          <b>Prompt</b>
-          <pre>${appState.original_prompt}</pre>
-          <b>Heatmap</b>
-          ${originalHeatmap}
-          <b>Significance</b>
-          ${originalReport}
-        `;
-
-        const newHeatmap = buildHeatmapHTML(data.new_analysis.heatmap_data);
-        const newReport = buildReportHTML(data.new_analysis.connections);
-
-        const afterHTML = `
-          <h3>After</h3>
-          <b>Prompt</b>
-          <pre>${data.new_prompt}</pre>
-          <b>Heatmap</b>
-          ${newHeatmap}
-          <b>Significance</b>
-          ${newReport}
-        `;
-
-        const scoreHTML = buildScoreHTML(data.change_data);
-
-        experimentDisplay.innerHTML = `
-          <h2 style="margin: 0 0 8px; font-size: 1.1rem;">${type.charAt(0).toUpperCase() + type.slice(1)} Study Results</h2>
-          <div class="compare-container">
-            <div class="compare-box compare-before">${beforeHTML}</div>
-            <div class="compare-box">${afterHTML}</div>
-          </div>
-          <hr style="margin-top: 14px; border-color: rgba(55, 65, 81, 0.8);" />
-          <h3 style="margin-top: 10px;">Change Analysis</h3>
-          <details style="margin-bottom: 8px; font-size: 0.8rem;">
-            <summary><strong>How is the semantic change score (1–10) computed?</strong></summary>
-            <div style="margin-top: 4px;">
-              <p>An evaluator model compares original and new outputs, scoring how much the meaning, tone, or structure changed (1 = minimal, 10 = major shift).</p>
-            </div>
-          </details>
-          ${scoreHTML}
-          <hr style="margin-top: 16px; border-color: rgba(55, 65, 81, 0.8);" />
-          <h3 style="margin-top: 10px;">Original Output</h3>
-          <pre>${appState.original_output}</pre>
-          <h3>New Output</h3>
-          <pre>${data.new_output}</pre>
-        `;
-
-        setStatus(statusEl, `${type.charAt(0).toUpperCase() + type.slice(1)} study complete.`);
-      } catch (err) {
-        console.error("Experiment error:", err);
-        setStatus(statusEl, `Error: ${err.message}`, true);
-        experimentDisplay.innerHTML =
-          `<p style="color: #f97373;"><strong>Error:</strong> ${err.message}</p>`;
-        experimentDisplay.style.display = "block";
+         const res = await fetch("/api/run_experiment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                type: 'ablation', 
+                original_prompt: appState.prompt, 
+                original_output: appState.output,
+                changes: ablationInput.value
+            })
+         });
+         const data = await res.json();
+         renderExperimentResult("Clarity Test", data);
+         setStatus("abl", "Done.");
+      } catch(e) {
+         setStatus("abl", "Error.", true);
       } finally {
-        setLoading(false);
+         bAblate.disabled = false;
       }
-    }
+    });
 
-    bAblate.addEventListener("click", () => runExperiment("ablation"));
-    bCounterfactual.addEventListener("click", () => runExperiment("counterfactual"));
+    // 4. COUNTERFACTUAL (Scenario Switch)
+    bCounterfactual.addEventListener("click", async () => {
+      setStatus("cnt", "Running scenario test...");
+      bCounterfactual.disabled = true;
+      
+      try {
+         const res = await fetch("/api/run_experiment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                type: 'counterfactual', 
+                original_prompt: appState.prompt, 
+                original_output: appState.output,
+                changes: counterfactualInput.value
+            })
+         });
+         const data = await res.json();
+         renderExperimentResult("Scenario Switch", data);
+         setStatus("cnt", "Done.");
+      } catch(e) {
+         setStatus("cnt", "Error.", true);
+      } finally {
+         bCounterfactual.disabled = false;
+      }
+    });
+
+    function renderExperimentResult(title, data) {
+        experimentDisplay.style.display = "block";
+        experimentDisplay.innerHTML = `
+            <h3>${title} Results</h3>
+            <div style="display:flex; gap:20px; margin-top:10px;">
+                <div style="flex:1; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;">
+                    <strong style="color:#94a3b8">New Prompt:</strong>
+                    <pre style="white-space:pre-wrap; font-size:0.85rem; margin-top:5px;">${data.new_prompt}</pre>
+                </div>
+                <div style="flex:1; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;">
+                     <strong style="color:#94a3b8">New Output:</strong>
+                     <pre style="white-space:pre-wrap; font-size:0.85rem; margin-top:5px;">${data.new_output}</pre>
+                </div>
+            </div>
+            <p style="margin-top:10px;"><strong>Change Score:</strong> ${data.change_data.semantic_change_score}/10</p>
+        `;
+        experimentDisplay.scrollIntoView({ behavior: "smooth" });
+    }
   </script>
 </body>
 </html>
