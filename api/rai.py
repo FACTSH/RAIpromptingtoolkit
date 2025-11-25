@@ -95,14 +95,11 @@ def generate_text(prompt: str) -> str:
     if GENERATION_MODEL is None:
         raise RuntimeError("Generation model is not initialized.")
 
-    constrained_prompt = prompt.strip() + "\n\nRespond in 100 words or fewer."
+    constrained_prompt = prompt.strip() 
 
     response = GENERATION_MODEL.generate_content(constrained_prompt)
     full_output = response.text or ""
 
-    words = full_output.split()
-    if len(words) > 100:
-        return " ".join(words[:100]) + "..."
     return full_output
 
 
@@ -379,10 +376,6 @@ def http_generate():
     prompt = data.get("prompt")
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
-
-    # Input length limit: 20 words as a proxy for 20 tokens
-    if len(prompt.split()) > 20:
-        return jsonify({"error": "Input prompt is limited to 20 tokens (words)."}), 400
 
     try:
         clean = clean_prompt(prompt)
