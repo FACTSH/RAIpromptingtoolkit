@@ -82,24 +82,24 @@ def extract_json_object(text: str):
         return None, f"Failed to parse JSON from analysis response: {e}"
 
 
-# -------- 3. CORE GENERATION (NO LIMITS) --------
+# -------- 3. CORE GENERATION (100-WORD OUTPUT LIMIT) --------
 
 def generate_text(prompt: str) -> str:
     """
-    Generate an output for the given prompt without word limits.
+    Generate an output for the given prompt, with a hard limit of 100 words.
+    The model is explicitly instructed to stay under 100 words, and the result
+    is post-processed to enforce the cap.
     """
     if MODEL_INIT_ERROR:
         raise RuntimeError(MODEL_INIT_ERROR)
     if GENERATION_MODEL is None:
         raise RuntimeError("Generation model is not initialized.")
 
-    # Removed the artificial constraint instructions
-    constrained_prompt = prompt.strip()
+    constrained_prompt = prompt.strip() + "\n\nRespond in 100 words or fewer."
 
     response = GENERATION_MODEL.generate_content(constrained_prompt)
     full_output = response.text or ""
 
-    # Removed truncation logic
     return full_output
 
 
@@ -107,7 +107,23 @@ def generate_text(prompt: str) -> str:
 
 def analyze_full_report(prompt: str, output: str) -> dict:
     """
-    Use the analysis model to return structured JSON.
+    Use the analysis model to return structured JSON:
+
+    {
+      "heatmap_data": [
+        {"word": "Write", "impact_score": 4},
+        ...
+      ],
+      "connections": [
+        {
+          "prompt_word": "formal",
+          "impact_score": 5,
+          "influenced_output_words": ["I hope this email finds you well", "..."]
+        },
+        ...
+      ],
+      "raw_analysis_text": "..."   # optional, for debugging
+    }
     """
     if MODEL_INIT_ERROR:
         raise RuntimeError(MODEL_INIT_ERROR)
@@ -204,6 +220,7 @@ Model Output:
 def ablate_prompt(original_prompt: str, changes_text: str) -> str:
     """
     Remove comma-separated terms from the prompt (case-insensitive).
+    Example: "formal, polite"
     """
     if not changes_text:
         return original_prompt
@@ -223,6 +240,12 @@ def ablate_prompt(original_prompt: str, changes_text: str) -> str:
 def parse_counterfactual_pairs(text: str) -> dict:
     """
     Parse lines of 'word, replacement' into a mapping.
+    Example input:
+
+        formal, informal
+        polite, rude
+
+    Returns: { "formal": "informal", "polite": "rude" }
     """
     mapping = {}
     if not text:
@@ -245,7 +268,8 @@ def parse_counterfactual_pairs(text: str) -> dict:
 
 def apply_counterfactual(original_prompt: str, mapping: dict) -> str:
     """
-    Replace words/phrases based on a mapping.
+    Replace words/phrases based on a mapping: { "formal": "informal", ... }.
+    Case-insensitive, but preserves output as-is from replacement.
     """
     new_prompt = original_prompt
     if not isinstance(mapping, dict):
@@ -353,7 +377,7 @@ def http_generate():
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
 
-    # LIMIT REMOVED: No 20-word check here anymore
+    # Input length limit: 20 words as a proxy for 20 tokens
 
     try:
         clean = clean_prompt(prompt)
@@ -390,6 +414,24 @@ def http_analyze():
 
 @app.route("/api/run_experiment", methods=["POST"])
 def http_run_experiment():
+    """
+    Request body from frontend:
+
+    {
+      "type": "ablation" | "counterfactual",
+      "original_prompt": "string",
+      "original_output": "string",
+      "changes": string
+    }
+
+    - For "ablation": changes is a string like:
+        "formal, polite"
+      We remove those words from the prompt.
+
+    - For "counterfactual": changes is a multiline string like:
+        "formal, informal\npolite, rude"
+      We parse each line as "word, replacement" and replace in the prompt.
+    """
     data = request.json or {}
     experiment_type = data.get("type")
     original_prompt = data.get("original_prompt")
@@ -429,8 +471,13 @@ def http_run_experiment():
                 ), 400
             new_prompt = apply_counterfactual(original_prompt, mapping)
 
+        # Generate new output for modified prompt
         new_output = generate_text(new_prompt)
+
+        # Analyze the new prompt-output pair
         new_analysis = analyze_full_report(new_prompt, new_output)
+
+        # Evaluate semantic change vs original
         change_data = evaluate_change(
             original_prompt, original_output, new_prompt, new_output
         )
