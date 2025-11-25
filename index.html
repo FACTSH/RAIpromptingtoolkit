@@ -5,203 +5,837 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Smart Prompt Studio</title>
   
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
 
   <style>
-    /* (Keep your existing styles exactly as they were) */
     :root {
       --bg: #020617;
       --card-bg: rgba(15, 23, 42, 0.98);
       --card-border: rgba(148, 163, 184, 0.4);
+      --card-border-soft: rgba(148, 163, 184, 0.15);
       --text-primary: #e5e7eb;
       --text-muted: #9ca3af;
-      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --font-mono: ui-monospace, SFMono-Regular, monospace;
       --accent-primary: #6366f1;
+      --accent-secondary: #22c55e;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius-lg: 20px;
+      --radius-md: 10px;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.9);
+      --transition-fast: 0.18s ease-out;
     }
 
+    * { box-sizing: border-box; }
+
     body {
-      margin: 0; padding: 32px 20px 40px;
+      margin: 0;
+      padding: 32px 20px 40px;
       font-family: var(--font-main);
       color: var(--text-primary);
-      background: radial-gradient(circle at top, #1d2748 0, transparent 55%), var(--bg);
+      background:
+        radial-gradient(circle at top, #1d2748 0, transparent 55%),
+        radial-gradient(circle at bottom left, #0f766e 0, transparent 50%),
+        var(--bg);
       min-height: 100vh;
     }
 
+    /* --- Header --- */
     header {
-      max-width: 1280px; margin: 0 auto 32px; padding-bottom: 24px;
+      max-width: 1280px;
+      margin: 0 auto 32px;
+      padding-bottom: 24px;
       border-bottom: 1px solid rgba(148, 163, 184, 0.15);
     }
-    .header-content { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; }
-    .header-left { display: flex; gap: 24px; }
 
-    #app-logo { height: 80px; width: 80px; border-radius: 20px; background: #1e293b; object-fit: cover; }
-    
-    .header-text h1 { margin: 0 0 8px; font-size: 2rem; font-weight: 700; color: white; }
-    .header-text p { margin: 0; color: var(--text-muted); max-width: 600px; }
+    .header-content {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
 
-    /* User Profile Styles */
-    .user-section {
+    #app-logo {
+      height: 100px; 
+      width: 100px; 
+      border-radius: 24px; 
+      background: #1e293b;
+      object-fit: cover;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .header-text h1 {
+      margin: 0 0 8px 0;
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-text p {
+      margin: 0 0 16px 0;
+      font-size: 1rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      max-width: 700px;
+    }
+
+    .significance-box {
       background: rgba(30, 41, 59, 0.5);
-      padding: 10px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-left: 4px solid var(--accent-primary);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      max-width: 800px;
+    }
+    .significance-box strong { color: #818cf8; }
+
+    /* --- Grid Layout --- */
+    .bento-grid {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.1fr 1.4fr;
+      gap: 20px;
+    }
+
+    .bento-item {
+      background: radial-gradient(circle at top left, #111827 0, #020617 70%);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      border: 1px solid var(--card-border-soft);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .bento-item:hover {
+      border-color: var(--card-border);
+      transform: translateY(-2px);
+    }
+
+    .bento-prompt { grid-column: 1; grid-row: 1 / span 2; }
+    .bento-output { grid-column: 2; grid-row: 1; }
+    .bento-analysis { grid-column: 2; grid-row: 2; }
+    .bento-ablation { grid-column: 1; grid-row: 3; }
+    .bento-counterfactual { grid-column: 2; grid-row: 3; }
+    .bento-preview { grid-column: 1 / span 2; grid-row: 4; display: none; }
+
+    /* --- Typography & Context --- */
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #c7d2fe;
       display: flex;
       align-items: center;
-      gap: 12px;
-      min-width: 200px;
-      justify-content: center;
+      gap: 8px;
     }
-    .user-info { display: none; align-items: center; gap: 10px; }
-    .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--accent-primary); }
-    .user-name { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; }
-    .login-msg { font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; display: block; text-align: center;}
 
-    /* Grid & Inputs (Simplified from your original for brevity, add back if needed) */
-    .bento-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .bento-item { background: #0f172a; border-radius: 20px; padding: 24px; border: 1px solid rgba(148,163,184,0.2); }
-    textarea { width: 100%; background: #1e293b; color: white; padding: 10px; border-radius: 8px; border: 1px solid #334155; font-family: var(--font-mono); min-height: 100px; }
-    button { background: #4f46e5; color: white; border: none; padding: 10px 20px; border-radius: 99px; cursor: pointer; margin-top: 10px; font-weight: 600; }
-    button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    h3 span.step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(79, 70, 229, 0.2);
+      border: 1px solid rgba(129, 140, 248, 0.4);
+      font-size: 0.75rem;
+      color: #e5e7eb;
+    }
 
-    @media (max-width: 768px) { .bento-grid { grid-template-columns: 1fr; } .header-content { flex-direction: column; } }
+    .edu-context {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(71, 85, 105, 0.6);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    
+    .edu-context summary {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      cursor: pointer;
+      list-style: none;
+    }
+    
+    .edu-context summary:hover { color: #e2e8f0; }
+    .edu-context summary::after { content: " +"; font-weight: bold; }
+    .edu-context[open] summary::after { content: " -"; }
+
+    .edu-content {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    /* --- Inputs & Buttons --- */
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: #0f172a;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    
+    textarea:focus, input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+    }
+
+    button:disabled {
+      background: #334155 !important;
+      color: #94a3b8;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    #b-generate { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    #b-analyze { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    #b-ablate { background: linear-gradient(135deg, #f97316, #ea580c); }
+    #b-counterfactual { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
+
+    .status-line { font-size: 0.8rem; color: #94a3b8; min-height: 1.2em; margin-top: 4px; }
+
+    /* --- Data Visualization Styles (Ported from oldind) --- */
+    
+    /* Heatmap Colors */
+    .impact-1, .impact-2, .impact-3, .impact-4, .impact-5 {
+      padding: 2px 6px;
+      border-radius: 999px;
+      margin: 0 2px 3px 0;
+      display: inline-block;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+    }
+
+    .impact-1 { background: rgba(34, 197, 94, 0.14); color: #bbf7d0; }
+    .impact-2 { background: rgba(34, 197, 94, 0.28); color: #86efac; }
+    .impact-3 { background: rgba(234, 179, 8, 0.4); color: #fde047; }
+    .impact-4 { background: rgba(248, 113, 113, 0.7); color: #fef2f2; }
+    .impact-5 { background: rgba(220, 38, 38, 0.98); color: #ffffff; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4); }
+
+    /* Legend */
+    .color-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(148, 163, 184, 0.15);
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* Significance Report Items */
+    .report-item {
+      border-bottom: 1px dashed rgba(55, 65, 81, 0.85);
+      padding: 6px 0 8px;
+      margin-bottom: 2px;
+      font-size: 0.85rem;
+      color: #e5e7eb;
+    }
+    
+    .prompt-word-high {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+      margin-right: 2px;
+      background: rgba(239, 68, 68, 0.95);
+      color: #fef2f2;
+      font-size: 0.8rem;
+    }
+    
+    .prompt-word-med {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+      margin-right: 2px;
+      background: rgba(234, 179, 8, 0.82);
+      color: #111827;
+      font-size: 0.8rem;
+    }
+    
+    .output-word {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      margin: 0 2px;
+    }
+    
+    .arrow { margin: 0 6px; color: var(--text-muted); }
+
+    /* Comparison Layout for Experiments */
+    .compare-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .compare-box {
+      flex: 1 1 300px;
+      background: rgba(2, 6, 23, 0.5);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .compare-before {
+      border-right: 1px dashed rgba(55, 65, 81, 0.9);
+      margin-right: 4px;
+    }
+
+    .compare-box h4 {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }
+
+    .compare-box pre {
+      white-space: pre-wrap;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      background: #020617;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid rgba(15, 23, 42, 0.9);
+      margin-bottom: 12px;
+      color: #e2e8f0;
+    }
+
+    /* Impact Score Bar */
+    .change-report {
+      margin-top: 16px;
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), rgba(15, 23, 42, 1));
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .score-bar-container {
+      height: 24px;
+      background: #020617;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      margin-top: 8px;
+      position: relative;
+    }
+    .score-bar-fill {
+      height: 100%;
+      font-size: 0.75rem;
+      line-height: 24px;
+      text-align: center;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .bento-grid { grid-template-columns: 1fr; }
+      .bento-prompt, .bento-output, .bento-analysis, .bento-ablation, .bento-counterfactual {
+        grid-column: 1; grid-row: auto;
+      }
+      .compare-before { border-right: none; border-bottom: 1px dashed rgba(55,65,81,0.9); padding-bottom: 16px; margin-bottom: 16px; }
+    }
   </style>
 </head>
 <body>
 
   <header>
     <div class="header-content">
-      <div class="header-left">
-        <div id="app-logo" style="display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:2rem;">🤖</div>
-        <div class="header-text">
-          <h1>Smart Prompt Studio</h1>
-          <p>Tune your AI instructions. Sign in to save your preferences.</p>
-        </div>
-      </div>
-
-      <div class="user-section">
+      <img src="factsh.jpeg" alt="AI Tool Logo" id="app-logo" />
+      <div class="header-text">
+        <h1>Smart Prompt Studio</h1>
+        <p>A simple workspace to "tune" your AI instructions. Just like tuning a radio, we help you find the clearest signal so the AI does exactly what you want, without guessing.</p>
         
-        <div id="google-btn-container">
-            <span class="login-msg">Sign in to store data</span>
-            <div id="g_id_onload"
-                 data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE"
-                 data-callback="handleCredentialResponse"
-                 data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-size="large"
-                 data-theme="filled_black"
-                 data-text="sign_in_with"
-                 data-shape="pill"
-                 data-logo_alignment="left">
-            </div>
+        <div class="significance-box">
+          <strong>Why this matters:</strong> AI can sometimes act like a black box. This tool opens it up. We help you <strong>Spotlight</strong> what matters (Heatmaps), <strong>Erase</strong> clutter (Eraser Test), and <strong>Swap</strong> ideas (Scenario Test) to make sure your instruction is bulletproof.
         </div>
-
-        <div id="user-display" class="user-info">
-          <img id="user-pic" class="user-avatar" src="" alt="User" />
-          <div>
-             <div id="user-name" class="user-name"></div>
-             <div style="font-size:0.75rem; color:#94a3b8;">Account Active</div>
-          </div>
-        </div>
-
       </div>
     </div>
   </header>
 
   <div class="bento-grid">
-    <div class="bento-item">
-      <h3>1. Your Instruction</h3>
-      <textarea id="prompt-input">Write a short email about...</textarea>
-      <button id="b-generate">Generate</button>
-      <div id="status-gen" style="margin-top:5px; font-size:0.8rem; color:#94a3b8;"></div>
+    
+    <div class="bento-item bento-prompt">
+      <h3><span class="step">1</span>Your Instruction</h3>
+      
+      <details class="edu-context" open>
+        <summary>What is this?</summary>
+        <div class="edu-content">
+          <b>The Recipe:</b> This is the command you give the AI. <br>
+          <b>Why:</b> Vague instructions are like a bad recipe—the result will be messy. We need to be precise.<br>
+        </div>
+      </details>
+
+      <textarea id="prompt-input" placeholder="e.g., Write a short, formal, and polite email to my manager about a sick day.">Write a short, formal, and polite email to my manager about a sick day.</textarea>
+      <button id="b-generate">Get Answer</button>
+      <div id="status-generate" class="status-line"></div>
     </div>
 
-    <div class="bento-item">
-      <h3>2. AI Output</h3>
-      <textarea id="output-display" readonly></textarea>
-      <button id="b-analyze" disabled>Analyze</button>
+    <div class="bento-item bento-output">
+      <h3><span class="step">2</span>The AI's Answer</h3>
+      
+      <details class="edu-context">
+        <summary>What is this?</summary>
+        <div class="edu-content">
+           <br>
+          <b>The Draft:</b> This is what the AI wrote based on your recipe.<br>
+          <b>Why:</b> We need this first draft to check if the AI actually listened to you.
+        </div>
+      </details>
+
+      <textarea id="output-display" readonly placeholder="Answer appears here..."></textarea>
+      <button id="b-analyze" disabled>Analyze This</button>
+      <div id="status-analyze" class="status-line"></div>
     </div>
 
-    <div class="bento-item" style="grid-column: 1 / -1;">
-      <h3>3. Analysis Results</h3>
-      <div id="analysis-display" style="color:#cbd5e1; font-size: 0.9rem;"></div>
+    <div class="bento-item bento-analysis">
+      <h3><span class="step">3</span>Spotlight Check</h3>
+      
+      <details class="edu-context" open>
+        <summary>How does this work?</summary>
+        <div class="edu-content">
+           <br>
+          <b>The Thermal Camera:</b> We highlight words based on impact.<br>
+          
+          <div class="color-legend">
+            <div class="legend-item">
+              <div class="dot" style="background: #dc2626;"></div> <span>High Impact (Essential)</span>
+            </div>
+            <div class="legend-item">
+              <div class="dot" style="background: #f87171;"></div> <span>Med-High</span>
+            </div>
+            <div class="legend-item">
+              <div class="dot" style="background: #eab308;"></div> <span>Medium</span>
+            </div>
+            <div class="legend-item">
+              <div class="dot" style="background: #22c55e;"></div> <span>Low Impact (Ignored)</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div id="analysis-report-display" style="margin-top:10px;">
+        <p style="font-size:0.9rem; color:#cbd5e1;"><i>Complete Step 2 to unlock the spotlight.</i></p>
+      </div>
     </div>
+
+    <div class="bento-item bento-ablation">
+      <h3><span class="step">A</span>The "Eraser" Test</h3>
+      
+      <details class="edu-context">
+        <summary>Why use this?</summary>
+        <div class="edu-content">
+          <b>Less is More:</b> We delete a word (like "polite") and ask the AI again.<br>
+          <b>Why:</b> If deleting the word changes nothing, then that word was useless.
+        </div>
+      </details>
+
+      <input type="text" id="ablation-input" placeholder="Words to erase (e.g. formal, polite)" />
+      <button id="b-ablate" disabled>Run Eraser Test</button> 
+      <div id="status-ablation" class="status-line"></div>
+    </div>
+
+    <div class="bento-item bento-counterfactual">
+      <h3><span class="step">B</span>The "Swap" Test</h3>
+      
+      <details class="edu-context">
+        <summary>Why use this?</summary>
+        <div class="edu-content">
+          <b>The Flip:</b> We swap a word for its opposite (e.g., "formal" → "casual").<br>
+          <b>Why:</b> To check understanding. If you ask for "rude" instead of "polite", does the tone change?
+        </div>
+      </details>
+
+      <textarea id="counterfactual-input" style="min-height: 60px;" placeholder="formal, informal&#10;polite, rude"></textarea>
+      <button id="b-counterfactual" disabled>Run Swap Test</button> 
+      <div id="status-counterfactual" class="status-line"></div>
+    </div>
+
+    <div class="bento-item bento-preview" id="experiment-display"></div>
   </div>
 
   <script>
-    // --- 1. GOOGLE AUTH HANDLER ---
-    async function handleCredentialResponse(response) {
-      const btnContainer = document.getElementById("google-btn-container");
-      const userDisplay = document.getElementById("user-display");
-      const userName = document.getElementById("user-name");
-      const userPic = document.getElementById("user-pic");
+    // --- DOM Elements ---
+    const promptInput = document.getElementById("prompt-input");
+    const outputDisplay = document.getElementById("output-display");
+    const ablationInput = document.getElementById("ablation-input");
+    const counterfactualInput = document.getElementById("counterfactual-input");
+    const analysisDisplay = document.getElementById("analysis-report-display");
+    const experimentDisplay = document.getElementById("experiment-display");
 
-      console.log("Encoded JWT ID token: " + response.credential);
+    const bGenerate = document.getElementById("b-generate");
+    const bAnalyze = document.getElementById("b-analyze");
+    const bAblate = document.getElementById("b-ablate");
+    const bCounterfactual = document.getElementById("b-counterfactual");
 
-      try {
-        // Send token to backend for verification & storage
-        const res = await fetch("http://localhost:5001/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credential: response.credential })
-        });
-        
-        const data = await res.json();
+    const statusElements = {
+      gen: document.getElementById("status-generate"),
+      ana: document.getElementById("status-analyze"),
+      abl: document.getElementById("status-ablation"),
+      cnt: document.getElementById("status-counterfactual")
+    };
 
-        if (data.status === "success") {
-          // UI: Hide button, show profile
-          btnContainer.style.display = "none";
-          userDisplay.style.display = "flex";
-          
-          // Fill data
-          userName.textContent = data.user.name;
-          userPic.src = data.user.picture;
-          
-          console.log("User stored in DB:", data.user);
+    // --- Application State ---
+    const appState = {
+      original_prompt: "",
+      original_output: "",
+      original_analysis: {} // Stores heatmap and connection data
+    };
+
+    // --- Visualization Helpers (Preserving detailed logic from oldind) ---
+
+    function buildHeatmapHTML(heatmapData) {
+      if (!Array.isArray(heatmapData) || heatmapData.length === 0) {
+        return "<p><i>No heatmap data available.</i></p>";
+      }
+      let html = "<div style='line-height: 2.0;'>";
+      heatmapData.forEach(item => {
+        const word = item.word || "";
+        const score = item.impact_score || 0;
+        const clamped = Math.max(1, Math.min(5, score));
+        html += `<span class="impact-${clamped}">${word}</span>`;
+      });
+      html += "</div>";
+      return html;
+    }
+
+    function buildReportHTML(connectionsData) {
+      if (!Array.isArray(connectionsData) || connectionsData.length === 0) {
+        return "<p style='font-size:0.85rem; color:#94a3b8'><i>No strong key connections identified.</i></p>";
+      }
+      let html = "<div style='margin-top:12px;'>";
+      connectionsData.forEach(item => {
+        const promptWord = item.prompt_word || "N/A";
+        const score = item.impact_score || 0;
+        const outputWords = item.influenced_output_words || [];
+        const promptClass = score >= 4 ? "prompt-word-high" : "prompt-word-med";
+
+        html += `<div class="report-item">`;
+        html += `<span class="${promptClass}">${promptWord}</span>`;
+        html += `<span class="arrow">→</span>`;
+        if (outputWords.length === 0) {
+          html += "<i style='color:#64748b'>(No direct link)</i>";
         } else {
-          console.error("Auth failed on server", data);
+          html += outputWords
+            .map(w => `<span class="output-word">${w}</span>`)
+            .join(" ");
         }
-      } catch (e) {
-        console.error("Network error during auth", e);
+        html += "</div>";
+      });
+      html += "</div>";
+      return html;
+    }
+
+    function buildScoreHTML(scoreData) {
+      const rawScore = scoreData && typeof scoreData.semantic_change_score === "number"
+          ? scoreData.semantic_change_score
+          : 0;
+      const score = Math.max(1, Math.min(10, rawScore || 1));
+      const summary = (scoreData && scoreData.change_summary) || "No summary available.";
+
+      // Color calc: Green to Red transition
+      const red = Math.floor((score - 1) * (255 / 9));
+      const green = 255 - red;
+      const color = `rgb(${red}, ${green}, 0)`;
+
+      return `
+        <div class="change-report">
+          <strong style="color:#e2e8f0; font-size:0.9rem;">Total Impact Score (How much did the output change?)</strong>
+          <div class="score-bar-container">
+            <div class="score-bar-fill" style="width: ${score * 10}%; background-color: ${color};">
+              ${score} / 10
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-style: italic; color: #cbd5e1; font-size:0.85rem;"><strong>Summary:</strong> ${summary}</div>
+        </div>
+      `;
+    }
+
+    // --- UI Helpers ---
+
+    function setStatus(key, message, isError = false) {
+      const el = statusElements[key];
+      if (el) {
+        el.textContent = message;
+        el.style.color = isError ? "#f87171" : "#94a3b8";
       }
     }
 
-    // --- 2. EXISTING APP LOGIC ---
-    const bGenerate = document.getElementById('b-generate');
-    const bAnalyze = document.getElementById('b-analyze');
-    const promptInput = document.getElementById('prompt-input');
-    const outputDisplay = document.getElementById('output-display');
-    const analysisDisplay = document.getElementById('analysis-display');
+    function clearAllStatuses() {
+      Object.values(statusElements).forEach(el => el.textContent = "");
+    }
 
-    bGenerate.addEventListener('click', async () => {
-        const p = promptInput.value;
-        bGenerate.textContent = "Generating...";
-        try {
-            const req = await fetch('/api/generate', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({prompt: p})
-            });
-            const data = await req.json();
-            outputDisplay.value = data.output;
-            bAnalyze.disabled = false;
-        } catch(e) { alert(e); }
-        bGenerate.textContent = "Generate";
+    function toggleExperimentButtons(enabled) {
+      bAblate.disabled = !enabled;
+      bCounterfactual.disabled = !enabled;
+    }
+
+    // --- Event Listeners ---
+
+    // 1. GENERATE
+    bGenerate.addEventListener("click", async () => {
+      clearAllStatuses();
+      appState.original_prompt = promptInput.value.trim();
+      
+      if (!appState.original_prompt) {
+        setStatus("gen", "Please enter an instruction first.", true);
+        return;
+      }
+
+      // Reset Interface
+      appState.original_output = "";
+      appState.original_analysis = {};
+      outputDisplay.value = "";
+      analysisDisplay.innerHTML = "<p style='font-size:0.9rem; color:#cbd5e1;'><i>Output changed. Run analysis again.</i></p>";
+      experimentDisplay.style.display = "none";
+      bAnalyze.disabled = true;
+      toggleExperimentButtons(false);
+
+      bGenerate.disabled = true;
+      setStatus("gen", "Generating answer...");
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: appState.original_prompt })
+        });
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+        appState.original_output = data.output || "";
+        outputDisplay.value = appState.original_output;
+        
+        bAnalyze.disabled = false;
+        setStatus("gen", "Output generated.");
+      } catch (err) {
+        console.error(err);
+        setStatus("gen", "Error generating output.", true);
+      } finally {
+        bGenerate.disabled = false;
+      }
     });
 
-    bAnalyze.addEventListener('click', async () => {
-        bAnalyze.textContent = "Analyzing...";
-        try {
-            const req = await fetch('/api/analyze', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({prompt: promptInput.value, output: outputDisplay.value})
-            });
-            const data = await req.json();
-            analysisDisplay.innerHTML = JSON.stringify(data, null, 2);
-        } catch(e) { alert(e); }
-        bAnalyze.textContent = "Analyze";
+    // 2. ANALYZE
+    bAnalyze.addEventListener("click", async () => {
+      clearAllStatuses();
+      if (!appState.original_output) return;
+
+      bAnalyze.disabled = true;
+      setStatus("ana", "Calculating heatmap & significance...");
+
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: appState.original_prompt,
+            output: appState.original_output
+          })
+        });
+        const data = await res.json();
+        appState.original_analysis = data;
+
+        if (data.error) throw new Error(data.error);
+
+        // Render Heatmap
+        const heatmapHTML = buildHeatmapHTML(data.heatmap_data);
+        // Render Connections
+        const reportHTML = buildReportHTML(data.connections);
+
+        analysisDisplay.innerHTML = `
+          <div style="margin-bottom:12px;">
+            <h4 style="margin:0 0 6px; color:#e2e8f0; font-size:0.95rem;">Heatmap</h4>
+            ${heatmapHTML}
+          </div>
+          <div>
+            <h4 style="margin:0 0 6px; color:#e2e8f0; font-size:0.95rem;">Key Connections</h4>
+            ${reportHTML}
+          </div>
+        `;
+
+        // Auto-fill Ablation Input with high-impact words
+        if (Array.isArray(data.heatmap_data)) {
+          const highImpact = data.heatmap_data
+            .filter(item => (item.impact_score || 0) >= 4 && item.word && /^[a-zA-Z0-9]+$/.test(item.word))
+            .map(item => item.word);
+          if(highImpact.length) ablationInput.value = [...new Set(highImpact)].join(", ");
+        }
+
+        toggleExperimentButtons(true);
+        setStatus("ana", "Analysis complete.");
+      } catch (err) {
+        console.error(err);
+        setStatus("ana", "Analysis failed.", true);
+      } finally {
+        bAnalyze.disabled = false;
+      }
     });
+
+    // 3. EXPERIMENTS (Ablation & Counterfactual)
+    async function runExperiment(type) {
+      const statusKey = type === "ablation" ? "abl" : "cnt";
+      const inputEl = type === "ablation" ? ablationInput : counterfactualInput;
+      const btnEl = type === "ablation" ? bAblate : bCounterfactual;
+      
+      clearAllStatuses();
+
+      const changes = inputEl.value.trim();
+      if (!changes) {
+        setStatus(statusKey, "Please provide input first.", true);
+        return;
+      }
+
+      setStatus(statusKey, `Running ${type} study...`);
+      btnEl.disabled = true;
+      experimentDisplay.style.display = "none";
+
+      try {
+        const res = await fetch("/api/run_experiment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type,
+            original_prompt: appState.original_prompt,
+            original_output: appState.original_output,
+            changes
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        // Build Visualization for "Before" (Original)
+        // We reuse the stored original analysis if available, otherwise we might not have it fully.
+        // Usually appState.original_analysis is populated by Step 3.
+        const originalHeatmap = buildHeatmapHTML(appState.original_analysis.heatmap_data);
+        const originalReport = buildReportHTML(appState.original_analysis.connections);
+
+        // Build Visualization for "After" (New)
+        const newHeatmap = buildHeatmapHTML(data.new_analysis.heatmap_data);
+        const newReport = buildReportHTML(data.new_analysis.connections);
+        const scoreHTML = buildScoreHTML(data.change_data);
+
+        // Assemble the Full HTML
+        experimentDisplay.innerHTML = `
+          <h2 style="margin: 0 0 16px; font-size: 1.2rem; color:white;">
+            ${type === 'ablation' ? 'Eraser' : 'Swap'} Test Results
+          </h2>
+
+          <div class="compare-container">
+            
+            <div class="compare-box compare-before">
+              <h4>Before (Original)</h4>
+              
+              <div style="margin-bottom:12px;">
+                <strong style="color:#64748b; font-size:0.8rem;">PROMPT</strong>
+                <pre>${appState.original_prompt}</pre>
+              </div>
+              
+              <div style="margin-bottom:12px;">
+                <strong style="color:#64748b; font-size:0.8rem;">HEATMAP</strong>
+                ${originalHeatmap}
+              </div>
+              
+              <div>
+                 <strong style="color:#64748b; font-size:0.8rem;">SIGNIFICANCE</strong>
+                 ${originalReport}
+              </div>
+            </div>
+
+            <div class="compare-box">
+              <h4>After (Modified)</h4>
+              
+              <div style="margin-bottom:12px;">
+                <strong style="color:#64748b; font-size:0.8rem;">PROMPT</strong>
+                <pre>${data.new_prompt}</pre>
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <strong style="color:#64748b; font-size:0.8rem;">HEATMAP</strong>
+                ${newHeatmap}
+              </div>
+
+              <div>
+                 <strong style="color:#64748b; font-size:0.8rem;">SIGNIFICANCE</strong>
+                 ${newReport}
+              </div>
+            </div>
+          </div>
+
+          ${scoreHTML}
+
+          <hr style="margin: 24px 0; border-color: rgba(148,163,184,0.2);" />
+
+          <h3 style="margin-bottom: 12px;">Output Text Comparison</h3>
+          
+          <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; margin-bottom:12px;">
+            <strong style="display:block; color:#94a3b8; font-size:0.8rem; margin-bottom:4px;">ORIGINAL OUTPUT:</strong>
+            <div style="color:#cbd5e1; font-family:var(--font-mono); font-size:0.9rem; white-space:pre-wrap;">${appState.original_output}</div>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px;">
+            <strong style="display:block; color:#94a3b8; font-size:0.8rem; margin-bottom:4px;">NEW OUTPUT:</strong>
+            <div style="color:#cbd5e1; font-family:var(--font-mono); font-size:0.9rem; white-space:pre-wrap;">${data.new_output}</div>
+          </div>
+        `;
+
+        experimentDisplay.style.display = "block";
+        experimentDisplay.scrollIntoView({ behavior: "smooth" });
+        setStatus(statusKey, "Test complete.");
+
+      } catch (err) {
+        console.error(err);
+        setStatus(statusKey, `Error: ${err.message}`, true);
+      } finally {
+        btnEl.disabled = false;
+      }
+    }
+
+    bAblate.addEventListener("click", () => runExperiment("ablation"));
+    bCounterfactual.addEventListener("click", () => runExperiment("counterfactual"));
+
   </script>
 </body>
 </html>
